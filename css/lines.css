@@ -1,0 +1,11 @@
+#field {
+  width: 800px;
+  height: 800px;
+  background-color: #858585;
+  margin: auto;
+}
+
+.forGame {
+  display: flex;
+  justify-content: center;
+}
