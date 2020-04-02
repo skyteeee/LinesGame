@@ -1,7 +1,15 @@
 function init () {
   game.init();
   game.draw();
+  game.initRandomCell();
+  game.initRandomCell();
+  game.initRandomCell();
+  game.initRandomCell();
+}
 
+function onCanvasClick (event) {
+  console.log(event);
+  game.onClick(event.offsetX, event.offsetY);
 }
 
 class Cell {
@@ -9,6 +17,7 @@ class Cell {
   this.x = x;
   this.y = y;
   this.ball = null;
+  this.selected = false;
   }
 
   drawCell (game) {
@@ -16,6 +25,11 @@ class Cell {
     let y = -game.cellHeight2;
     let x2 = x + game.cellWidth - 1;
     let y2 = y + game.cellHeight - 1;
+
+    if (this.selected) {
+      game.ctx.fillStyle = '#cbcbcb';
+      game.ctx.fillRect(x+1, y+1, game.cellWidth-2, game.cellHeight-2);
+    }
 
     game.ctx.strokeStyle = '#fafffb';
     game.ctx.beginPath();
@@ -45,6 +59,7 @@ class Game {
   constructor() {
     this.canvas = null;
     this.ctx = null;
+    this.from = false;
     this.height = 0;
     this.width = 0;
     this.fieldHeight = 10;
@@ -59,7 +74,6 @@ class Game {
       let row = [];
       for (let x = 0; x < this.fieldWidth; x++) {
         let cell = new Cell(x, y);
-        cell.ball = this.createBall(x, y);
         row.push(cell);
       }
       this.field.push(row);
@@ -76,7 +90,25 @@ class Game {
     this.cellWidth = this.width / this.fieldWidth;
     this.cellHeight2 = this.cellHeight / 2;
     this.cellWidth2 = this.cellWidth / 2;
+  }
 
+  onClick (x, y) {
+    let cellX = Math.floor(x / this.cellWidth);
+    let cellY = Math.floor(y / this.cellHeight);
+    let cellPressed = this.field[cellY][cellX];
+    if (cellPressed.ball !== null) {
+      this.from = cellPressed;
+      cellPressed.selected = true;
+    } else {
+      this.from.selected = false;
+      cellPressed.ball = this.from.ball;
+      this.from.ball = null;
+      // let state = this.check();
+      // if (!state) {
+      //
+      // }
+    }
+    this.draw();
   }
 
   createBall(x, y) {
@@ -85,7 +117,25 @@ class Game {
     return new Ball(x, y, colorIdx, color);
   }
 
+  initRandomCell () {
+    let x;
+    let y;
+
+      y = Math.floor(Math.random()*this.fieldHeight);
+      x = Math.floor(Math.random()*this.fieldWidth);
+      let selectedCell = this.field[y][x];
+      selectedCell.ball = this.createBall(x, y);
+      this.draw();
+
+
+  }
+
+  check() {
+    console.log('Here is where I check!');
+  }
+
   draw () {
+    this.ctx.clearRect(0, 0, this.width, this.height);
     for (let y of this.field) {
       for (let cell of y) {
         this.ctx.save();
