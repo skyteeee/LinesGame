@@ -1,7 +1,7 @@
 function init () {
   game.init();
-  game.draw();
   game.generateBalls();
+  game.draw();
 }
 
 function onCanvasClick (event) {
@@ -17,7 +17,7 @@ class Cell {
   this.selected = false;
   }
 
-  drawCell (game) {
+  innerDraw (game) {
     let x = -game.cellWidth2;
     let y = -game.cellHeight2;
     let x2 = x + game.cellWidth - 1;
@@ -26,6 +26,8 @@ class Cell {
     if (this.selected) {
       game.ctx.fillStyle = '#cbcbcb';
       game.ctx.fillRect(x+1, y+1, game.cellWidth-2, game.cellHeight-2);
+    } else {
+      game.ctx.clearRect(x+1, y+1, game.cellWidth - 2, game.cellHeight - 2);
     }
 
     game.ctx.strokeStyle = '#fafffb';
@@ -46,7 +48,13 @@ class Cell {
       this.ball.drawBall(game);
     }
 
-    //game.ctx.strokeRect(game.cellWidth*this.x, game.cellHeight*this.y, game.cellWidth, game.cellHeight);
+  }
+
+  drawCell (game) {
+    game.ctx.save();
+    game.ctx.translate(game.cellWidth * this.x + game.cellWidth2, game.cellHeight * this.y + game.cellHeight2);
+    this.innerDraw(game);
+    game.ctx.restore();
   }
 
 }
@@ -54,11 +62,6 @@ class Cell {
 
 class Game {
   constructor() {
-    this.ballsPerTime = 5;
-    this.inARowToVanish = 4;
-    this.fieldHeight = 10;
-    this.fieldWidth = 10;
-
     this.canvas = null;
     this.ctx = null;
     this.from = null;
@@ -68,10 +71,26 @@ class Game {
     this.cellWidth = 0;
     this.cellHeight2 = 0;
     this.cellWidth2 = 0;
+    this.possibleBallColors = ['rgb(218,0,25)', 'rgb(14,109,0)', 'rgb(0,158,255)',
+      'rgb(255,91,0)', 'rgb(255,203,1)', 'rgb(0,0,255)', 'rgb(125,0,125)'];
+    this.initGame();
+  }
+
+  initGame() {
+    this.ballsPerTime = 5;
+    this.inARowToVanish = 4;
+    this.fieldHeight = 10;
+    this.fieldWidth = 10;
+    this.score = 0;
+    this.multiplier = 1;
+    this.level = 1;
+    this.scoreToLevelUp = 250;
+    this.levelToAddColor = 3;
     this.isGameOver = false;
-    this.possibleBallColors = ['rgb(255,0,95)', 'rgb(255,91,0)' , 'rgb(255,203,1)' , 'green' ,  'blue', 'rgb(0,158,255)' , 'purple'];
+
+    this.newColorIdx = 2;
     this.field = [];
-    for (let y = 0; y < this.fieldHeight; y ++) {
+    for (let y = 0; y < this.fieldHeight; y++) {
       let row = [];
       for (let x = 0; x < this.fieldWidth; x++) {
         let cell = new Cell(x, y);
@@ -82,10 +101,11 @@ class Game {
     }
   }
 
-  init () {
+  init() {
     this.canvas = document.getElementById('field');
     this.ctx = this.canvas.getContext('2d');
-    this.height = this.canvas.offsetHeight;
+    this.height = this.canvas.offsetHeight - 50;
+    this.gameHeight = this.canvas.offsetHeight;
     this.width = this.canvas.offsetWidth;
     this.cellHeight = this.height / this.fieldHeight;
     this.cellWidth = this.width / this.fieldWidth;
@@ -93,78 +113,108 @@ class Game {
     this.cellWidth2 = this.cellWidth / 2;
   }
 
-  checkAll (x, y, cell) {
-    let state = false;
-    let colorIdx = cell.ball.colorIdx;
-    let selected = this.field[y][x];
-
-    let state1 = this.check(x,y, 1, 0, colorIdx);
-    let state4 = this.check(x,y, -1, 0, colorIdx);
-    state1.push(selected);
-    state1.push(...state4);
-    state |= this.removeBallsIfNeeded(state1);
-
-    let state2 = this.check(x,y, 0, 1, colorIdx);
-    let state5 = this.check(x,y, 0, -1, colorIdx);
-    state2.push(selected);
-    state2.push(...state5);
-    state |= this.removeBallsIfNeeded(state2);
-
-    let state3 = this.check(x,y, 1, 1, colorIdx);
-    let state6 = this.check(x,y, -1, -1, colorIdx);
-    state3.push(selected);
-    state3.push(...state6);
-    state |= this.removeBallsIfNeeded(state3);
-
-    let state7 = this.check(x,y, 1, -1, colorIdx);
-    let state8 = this.check(x,y, -1, 1, colorIdx);
-    state7.push(selected);
-    state7.push(...state8);
-    state |= this.removeBallsIfNeeded(state7);
+  addColorOnLvlUp() {
+    if (this.level % this.levelToAddColor === 0) {
+      if (this.newColorIdx < this.possibleBallColors.length) {
+        this.newColorIdx++;
+        if (this.levelToAddColor === 3) {
+          this.levelToAddColor = 5;
+        }
+      }
+    }
+  }
 
 
-    if (!state) {
+  levelUpIfNeeded() {
+    if (this.score >= this.scoreToLevelUp) {
+      this.level++;
+      this.multiplier = this.multiplier * 1.25;
+      this.scoreToLevelUp = this.scoreToLevelUp + 250 * this.multiplier;
+      this.addColorOnLvlUp();
+    }
+  }
+
+  changeScore(multiplier) {
+    this.score = Math.floor(this.score + 25 * multiplier);
+    this.levelUpIfNeeded();
+  }
+
+  checkAll(x, y, cell) {
+    if (cell.ball !== null) {
+      let state = false;
+      let colorIdx = cell.ball.colorIdx;
+      let selected = this.field[y][x];
+
+      let state1 = this.check(x, y, 1, 0, colorIdx);
+      let state4 = this.check(x, y, -1, 0, colorIdx);
+      state1.push(selected);
+      state1.push(...state4);
+      state |= this.removeBallsIfNeeded(state1);
+
+      let state2 = this.check(x, y, 0, 1, colorIdx);
+      let state5 = this.check(x, y, 0, -1, colorIdx);
+      state2.push(selected);
+      state2.push(...state5);
+      state |= this.removeBallsIfNeeded(state2);
+
+      let state3 = this.check(x, y, 1, 1, colorIdx);
+      let state6 = this.check(x, y, -1, -1, colorIdx);
+      state3.push(selected);
+      state3.push(...state6);
+      state |= this.removeBallsIfNeeded(state3);
+
+      let state7 = this.check(x, y, 1, -1, colorIdx);
+      let state8 = this.check(x, y, -1, 1, colorIdx);
+      state7.push(selected);
+      state7.push(...state8);
+      state |= this.removeBallsIfNeeded(state7);
+
+      return state;
+    }
+  }
+
+  prepareNextMove (x, y, cell) {
+    if (!this.checkAll(x, y, cell)) {
       if (this.generateBalls() !== true) {
         this.isGameOver = true;
       }
     }
   }
 
-
-  onClick (x, y) {
+  operateGameOver() {
     if (this.isGameOver) {
-      return;
+      this.initGame();
+      this.generateBalls();
+      this.draw();
     }
+  }
+
+  onClick(x, y) {
+    this.operateGameOver();
     let cellX = Math.floor(x / this.cellWidth);
     let cellY = Math.floor(y / this.cellHeight);
     let cellPressed = this.field[cellY][cellX];
     if (cellPressed.ball !== null) {
+      if (this.from) {
+        this.from.selected = false;
+      }
       this.from = cellPressed;
       cellPressed.selected = true;
     } else {
       if (this.from) {
         this.from.selected = false;
+        cellPressed.selected = false;
         cellPressed.ball = this.from.ball;
         this.from.ball = null;
         this.from = null;
-        this.checkAll(cellX, cellY, cellPressed);
-      } else {
-        return false;
+        this.prepareNextMove(cellX, cellY, cellPressed);
       }
-      }
+    }
 
     this.draw();
   }
 
-  createBall(x, y) {
-    let colorIdx = Math.floor(Math.random() * this.possibleBallColors.length);
-    let color = this.possibleBallColors[colorIdx];
-    return new Ball(x, y, colorIdx, color);
-  }
-
-  initRandomCell () {
-    let idx;
-
+  findEmptyCells() {
     let emptyCells = [];
 
     for (let row of this.field) {
@@ -176,37 +226,77 @@ class Game {
     }
 
     if (emptyCells.length === 0) {
-      return false;
+      this.isGameOver = true;
+    }
+
+    return emptyCells;
+
+  }
+
+  initRandomCell(emptyCells) {
+    let idx;
+
+    if (emptyCells.length === 0) {
+      return null;
     }
 
     idx = Math.floor(Math.random() * emptyCells.length);
 
     let selectedCell = emptyCells[idx];
-      selectedCell.ball = this.createBall(selectedCell.x, selectedCell.y);
-      this.draw();
+    selectedCell.ball = this.createBall(selectedCell.x, selectedCell.y);
+    this.draw();
 
-      return true;
+    return selectedCell;
   }
 
-  generateBalls () {
-    for (let idx = 0; idx < this.ballsPerTime; idx++) {
-      let state = this.initRandomCell();
-      if (!state) {
-        return false;
+  checkBalls(state) {
+    for (let cell of state) {
+      if (cell !== null) {
+        this.checkAll(cell.x, cell.y, cell);
+      } else {
+        alert('Error!!!');
       }
     }
-    return true;
   }
+
 
   removeBallsIfNeeded (state) {
     if (state.length >= this.inARowToVanish) {
       for (let cell of state) {
+        this.changeScore(this.multiplier);
         cell.ball = null;
       }
       return true;
     }
     return false;
   }
+
+  generateBalls () {
+    let state = [];
+    for (let idx = 0; idx < this.ballsPerTime; idx++) {
+      let element = this.initRandomCell(this.findEmptyCells());
+      if (element !== null) {
+        state.push(element);
+      }
+    }
+    let empty = this.findEmptyCells();
+    if (empty.length === 0) {
+      return false;
+    }
+     else {
+      this.checkBalls(state);
+      return true;
+    }
+  }
+
+  createBall(x, y) {
+    let colorIdx = Math.floor(Math.random() * (this.newColorIdx+1));
+    let color = this.possibleBallColors[colorIdx];
+    return new Ball(x, y, colorIdx, color);
+  }
+
+
+
 
   check(x, y, deltaY, deltaX, colorIdx) {
     let originalDY = deltaY;
@@ -232,16 +322,27 @@ class Game {
     return inARow;
   }
 
+  drawHUD () {
+    this.ctx.font = 'bold 32px sans';
+    this.ctx.textAlign = 'start';
+    this.ctx.fillStyle = 'rgb(98,98,98)';
+    this.ctx.fillText(`Score: ${this.score}`, 1, this.gameHeight-15);
+    this.ctx.textAlign = 'end';
+    this.ctx.fillText(`Multiplier: ${this.newColorIdx+1}`, this.width - 1, this.gameHeight-15);
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText(`Level: ${this.level}`, this.width/2 -1, this.gameHeight-15);
+  }
+
+
   draw () {
-    this.ctx.clearRect(0, 0, this.width, this.height);
+    this.ctx.clearRect(0, 0, this.width, this.gameHeight);
+
     for (let y of this.field) {
       for (let cell of y) {
-        this.ctx.save();
-        this.ctx.translate(this.cellWidth * cell.x + this.cellWidth2, this.cellHeight * cell.y + this.cellHeight2);
         cell.drawCell(this);
-        this.ctx.restore();
       }
     }
+    this.drawHUD();
     if (this.isGameOver) {
       this.drawGameOver();
     }
@@ -249,7 +350,7 @@ class Game {
 
   drawGameOver () {
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-    this.ctx.fillRect(0, 0, this.width, this.height);
+    this.ctx.fillRect(0, 0, this.width, this.gameHeight);
     this.ctx.font = 'bold 84px sans';
     this.ctx.fillStyle = 'rgb(180,0,46)';
     this.ctx.strokeStyle = 'rgb(255, 255, 255)';
