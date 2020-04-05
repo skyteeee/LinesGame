@@ -78,6 +78,19 @@ class Cell {
 
 }
 
+class Color {
+  constructor(r, g, b, a = 1) {
+    this.red = r;
+    this.green = g;
+    this.blue = b;
+    this.alpha = a;
+  }
+
+  iRequestNormalColor () {
+    return `rgba(${this.red},${this.green},${this.blue},${this.alpha})`;
+  }
+
+}
 
 class Game {
   constructor() {
@@ -92,8 +105,15 @@ class Game {
     this.cellHeight2 = 0;
     this.cellWidth2 = 0;
     this.hudHeight = 50;
-    this.possibleBallColors = ['rgb(218,0,25)', 'rgb(14,109,0)', 'rgb(0,158,255)',
-      'rgb(255,91,0)', 'rgb(255,203,1)', 'rgb(0,0,255)', 'rgb(125,0,125)'];
+    this.possibleBallColors = [
+      new Color(218,0,25),
+      new Color(14,109,0),
+      new Color(0,158,255),
+      new Color(255,91,0),
+      new Color(255,203,1),
+      new Color(0,0,255),
+      new Color(125,0,125)
+    ];
   }
 
   refresh (time) {
@@ -118,6 +138,7 @@ class Game {
     this.fieldHeight = 10;
     this.fieldWidth = 10;
     this.score = 0;
+    this.earnedScore = 0;
     this.multiplier = 1;
     this.level = 1;
     this.scoreToLevelUp = 250;
@@ -168,7 +189,7 @@ class Game {
 
 
   levelUpIfNeeded() {
-    if (this.score >= this.scoreToLevelUp) {
+    if (this.score+this.earnedScore >= this.scoreToLevelUp) {
       this.level++;
       this.multiplier = this.multiplier * 1.25;
       this.scoreToLevelUp = Math.ceil(this.scoreToLevelUp + 250 * this.multiplier);
@@ -177,12 +198,13 @@ class Game {
   }
 
   changeScore(multiplier) {
-    this.score = Math.floor(this.score + 25 * multiplier);
+    this.earnedScore = Math.floor(this.earnedScore + 25 * multiplier);
     this.levelUpIfNeeded();
   }
 
   checkAll(x, y, ball) {
     if (ball !== null) {
+      this.earnedScore = 0;
       let state = false;
       let colorIdx = ball.colorIdx;
       let selected = this.field[y][x];
@@ -211,6 +233,7 @@ class Game {
       state7.push(...state8);
       state |= this.removeBallsIfNeeded(state7);
 
+      this.scoreAnimation();
       return state;
     }
   }
@@ -301,9 +324,11 @@ class Game {
 
   removeBallsIfNeeded (state) {
     if (state.length >= this.inARowToVanish) {
+      let delay = 0;
       for (let cell of state) {
         this.changeScore(this.multiplier);
-        cell.ball = null;
+        cell.ball.vanish(()=>{cell.ball = null;}, delay);
+        delay += 100;
       }
       return true;
     }
@@ -360,6 +385,10 @@ class Game {
     return inARow;
   }
 
+  scoreAnimation() {
+    let animation = new TWEEN.Tween(this).to({score:this.score+this.earnedScore}, 1000).easing(TWEEN.Easing.Quadratic.Out).start();
+  }
+
   drawHUD () {
     let offsetY = 12;
     let offsetX = 10;
@@ -367,9 +396,9 @@ class Game {
     this.ctx.textBaseline = 'top';
     this.ctx.textAlign = 'start';
     this.ctx.fillStyle = 'rgb(98,98,98)';
-    this.ctx.fillText(`Score: ${this.score}`, offsetX, offsetY);
+    this.ctx.fillText(`Score: ${Math.floor(this.score)}`, offsetX, offsetY);
     this.ctx.textAlign = 'end';
-    this.ctx.fillText(`To Level Up: ${this.scoreToLevelUp-this.score}`, this.width - offsetX, offsetY);
+    this.ctx.fillText(`To Level Up: ${Math.floor(this.scoreToLevelUp-this.score)}`, this.width - offsetX, offsetY);
     this.ctx.textAlign = 'center';
     this.ctx.fillText(`Level: ${this.level}`, this.width/2, offsetY);
   }
@@ -417,7 +446,7 @@ class Game {
 class Ball {
   constructor(x, y, colorIdx, color, cellWidth, cellHeight) {
     this.colorIdx = colorIdx;
-    this.color = color;
+    this.color = new Color(color.red, color.green, color.blue);
     this.px = 0;
     this.py = 0;
     this.x = x;
@@ -433,6 +462,13 @@ class Ball {
     let pX = x*this.cellWidth+this.cellWidth/2;
     let pY = y*this.cellHeight+this.cellHeight/2;
     return {pX:pX, pY:pY};
+  }
+
+  vanish (onComplete,delay = 0) {
+      let alphaChange = new TWEEN.Tween(this.color).to({alpha:0},300).easing(TWEEN.Easing.Quadratic.In)
+        .delay(delay).start();
+      let rescale = new TWEEN.Tween(this).to({scaleX:5, scaleY:5}, 300).easing(TWEEN.Easing.Quadratic.In)
+        .delay(delay).onComplete(onComplete).start();
   }
 
   hoover (oldx, oldy) {
@@ -453,7 +489,7 @@ class Ball {
 
   }
 
-  appear (delay=0) {
+  appear (delay= 0) {
     let animation = new TWEEN.Tween(this).to({scaleX:1, scaleY:1}, 400)
                                           .easing(TWEEN.Easing.Quadratic.In).delay(delay);
     animation.start();
@@ -492,12 +528,13 @@ class Ball {
     game.ctx.scale(this.scaleX, this.scaleY);
     let x = -game.cellWidth2;
     let y = -game.cellHeight2;
+    let color = this.color.iRequestNormalColor();
 
     let gradient = game.ctx.createRadialGradient(-12, -12, 0, 0, 0, 25);
 
     gradient.addColorStop(0, 'white');
-    gradient.addColorStop(0.7, this.color);
-    gradient.addColorStop(0.9, this.color);
+    gradient.addColorStop(0.7, color);
+    gradient.addColorStop(0.9, color);
     gradient.addColorStop(1, 'transparent');
 
     game.ctx.fillStyle = gradient;
