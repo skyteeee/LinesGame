@@ -1,7 +1,6 @@
 function init () {
   game.init();
-  game.generateBalls();
-  game.draw();
+  game.refresh(performance.now());
 }
 
 function onCanvasClick (event) {
@@ -15,6 +14,15 @@ class Cell {
   this.y = y;
   this.ball = null;
   this.selected = false;
+  }
+
+  handleSelect (state, game) {
+    this.selected = state;
+    if (state && this.ball) {
+      this.ball.selected(game);
+    } else {
+      this.ball.deselect(game);
+    }
   }
 
   innerDraw (game) {
@@ -71,9 +79,25 @@ class Game {
     this.cellWidth = 0;
     this.cellHeight2 = 0;
     this.cellWidth2 = 0;
+    this.hudHeight = 50;
     this.possibleBallColors = ['rgb(218,0,25)', 'rgb(14,109,0)', 'rgb(0,158,255)',
       'rgb(255,91,0)', 'rgb(255,203,1)', 'rgb(0,0,255)', 'rgb(125,0,125)'];
-    this.initGame();
+  }
+
+  refresh (time) {
+    this.animate(time);
+    this.draw();
+    if (this.decideToRefresh()) {
+      requestAnimationFrame((time1 => this.refresh(time1)));
+    }
+  }
+
+  animate (time) {
+    TWEEN.update(time);
+  }
+
+  decideToRefresh () {
+    return true;
   }
 
   initGame() {
@@ -90,6 +114,10 @@ class Game {
 
     this.newColorIdx = 2;
     this.field = [];
+    this.initField();
+  }
+
+  initField() {
     for (let y = 0; y < this.fieldHeight; y++) {
       let row = [];
       for (let x = 0; x < this.fieldWidth; x++) {
@@ -97,25 +125,27 @@ class Game {
         row.push(cell);
       }
       this.field.push(row);
-
     }
+    this.generateBalls();
   }
 
   init() {
+    this.initGame();
     this.canvas = document.getElementById('field');
     this.ctx = this.canvas.getContext('2d');
-    this.height = this.canvas.offsetHeight - 50;
+    this.height = this.canvas.offsetHeight - this.hudHeight;
     this.gameHeight = this.canvas.offsetHeight;
     this.width = this.canvas.offsetWidth;
     this.cellHeight = this.height / this.fieldHeight;
     this.cellWidth = this.width / this.fieldWidth;
     this.cellHeight2 = this.cellHeight / 2;
     this.cellWidth2 = this.cellWidth / 2;
+
   }
 
   addColorOnLvlUp() {
     if (this.level % this.levelToAddColor === 0) {
-      if (this.newColorIdx < this.possibleBallColors.length) {
+      if (this.newColorIdx < this.possibleBallColors.length-1) {
         this.newColorIdx++;
         if (this.levelToAddColor === 3) {
           this.levelToAddColor = 5;
@@ -129,7 +159,7 @@ class Game {
     if (this.score >= this.scoreToLevelUp) {
       this.level++;
       this.multiplier = this.multiplier * 1.25;
-      this.scoreToLevelUp = this.scoreToLevelUp + 250 * this.multiplier;
+      this.scoreToLevelUp = Math.ceil(this.scoreToLevelUp + 250 * this.multiplier);
       this.addColorOnLvlUp();
     }
   }
@@ -192,18 +222,17 @@ class Game {
   onClick(x, y) {
     this.operateGameOver();
     let cellX = Math.floor(x / this.cellWidth);
-    let cellY = Math.floor(y / this.cellHeight);
+    let cellY = Math.floor((y-this.hudHeight) / this.cellHeight);
     let cellPressed = this.field[cellY][cellX];
     if (cellPressed.ball !== null) {
       if (this.from) {
-        this.from.selected = false;
+        this.from.handleSelect (false, this);
       }
       this.from = cellPressed;
-      cellPressed.selected = true;
+      cellPressed.handleSelect (true, this);
     } else {
       if (this.from) {
-        this.from.selected = false;
-        cellPressed.selected = false;
+        this.from.handleSelect (false, this);
         cellPressed.ball = this.from.ball;
         this.from.ball = null;
         this.from = null;
@@ -235,17 +264,12 @@ class Game {
 
   initRandomCell(emptyCells) {
     let idx;
-
     if (emptyCells.length === 0) {
       return null;
     }
-
     idx = Math.floor(Math.random() * emptyCells.length);
-
     let selectedCell = emptyCells[idx];
     selectedCell.ball = this.createBall(selectedCell.x, selectedCell.y);
-    this.draw();
-
     return selectedCell;
   }
 
@@ -295,9 +319,6 @@ class Game {
     return new Ball(x, y, colorIdx, color);
   }
 
-
-
-
   check(x, y, deltaY, deltaX, colorIdx) {
     let originalDY = deltaY;
     let originalDX = deltaX;
@@ -323,26 +344,35 @@ class Game {
   }
 
   drawHUD () {
-    this.ctx.font = 'bold 32px sans';
+    let offsetY = 12;
+    let offsetX = 10;
+    this.ctx.font = 'bold 28px sans';
+    this.ctx.textBaseline = 'top';
     this.ctx.textAlign = 'start';
     this.ctx.fillStyle = 'rgb(98,98,98)';
-    this.ctx.fillText(`Score: ${this.score}`, 1, this.gameHeight-15);
+    this.ctx.fillText(`Score: ${this.score}`, offsetX, offsetY);
     this.ctx.textAlign = 'end';
-    this.ctx.fillText(`Multiplier: ${this.newColorIdx+1}`, this.width - 1, this.gameHeight-15);
+    this.ctx.fillText(`To Level Up: ${this.scoreToLevelUp-this.score}`, this.width - offsetX, offsetY);
     this.ctx.textAlign = 'center';
-    this.ctx.fillText(`Level: ${this.level}`, this.width/2 -1, this.gameHeight-15);
+    this.ctx.fillText(`Level: ${this.level}`, this.width/2, offsetY);
   }
 
 
-  draw () {
-    this.ctx.clearRect(0, 0, this.width, this.gameHeight);
-
+  drawField () {
+    this.ctx.save();
+    this.ctx.translate(0, this.hudHeight);
     for (let y of this.field) {
       for (let cell of y) {
         cell.drawCell(this);
       }
     }
+    this.ctx.restore();
+  }
+
+  draw () {
+    this.ctx.clearRect(0, 0, this.width, this.gameHeight);
     this.drawHUD();
+    this.drawField();
     if (this.isGameOver) {
       this.drawGameOver();
     }
@@ -366,11 +396,43 @@ class Ball {
   constructor(x, y, colorIdx, color) {
     this.colorIdx = colorIdx;
     this.color = color;
+    this.px = 0;
+    this.py = 0;
     this.x = x;
     this.y = y;
+    this.scaleX = 1;
+    this.scaleY = 1;
+    this.selectedTween = null;
+  }
+
+  selected (game) {
+    console.log('Selected ', this);
+    let goDown = new TWEEN.Tween(this).to({py: 0, scaleY:1, scaleX:1}, 300).easing(TWEEN.Easing.Quadratic.In);
+    let squeeze = new TWEEN.Tween(this).to({scaleX: 1.25, scaleY:0.75, py:game.cellHeight/8}, 300).easing(TWEEN.Easing.Quadratic.Out);
+    let unsqueeze = new TWEEN.Tween(this).to({scaleX: 1, scaleY:1, py: 0}, 200).easing(TWEEN.Easing.Quadratic.In);
+
+    this.selectedTween = new TWEEN.Tween(this)
+                  .to({py: -game.cellHeight/4, scaleY: 1.05, scaleX: 0.95}, 500)
+                  .easing(TWEEN.Easing.Quadratic.Out)
+                  .chain(goDown);
+    goDown.chain(squeeze);
+    squeeze.chain(unsqueeze);
+    unsqueeze.chain(this.selectedTween);
+    this.selectedTween.start();
+  }
+
+  deselect (game) {
+    console.log('Deselected ', this);
+    this.selectedTween.stop();
+    this.selectedTween = null;
+    this.py = 0;
+    this.scaleX = 1;
+    this.scaleY = 1;
   }
 
   drawBall (game) {
+    game.ctx.translate (this.px, this.py);
+    game.ctx.scale(this.scaleX, this.scaleY);
     let x = -game.cellWidth2;
     let y = -game.cellHeight2;
 
@@ -383,9 +445,7 @@ class Ball {
 
     game.ctx.fillStyle = gradient;
     game.ctx.fillRect(x, y, game.cellWidth, game.cellHeight);
-
   }
-
 }
 
 let game = new Game();
