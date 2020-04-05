@@ -16,6 +16,12 @@ class Cell {
   this.selected = false;
   }
 
+  setBall (ball) {
+    this.ball = ball;
+    this.ball.x = this.x;
+    this.ball.y = this.y;
+  }
+
   handleSelect (state, game) {
     this.selected = state;
     if (state && this.ball) {
@@ -52,10 +58,6 @@ class Cell {
     game.ctx.lineTo(x, y2);
     game.ctx.stroke();
 
-    if (this.ball) {
-      this.ball.drawBall(game);
-    }
-
   }
 
   drawCell (game) {
@@ -63,6 +65,15 @@ class Cell {
     game.ctx.translate(game.cellWidth * this.x + game.cellWidth2, game.cellHeight * this.y + game.cellHeight2);
     this.innerDraw(game);
     game.ctx.restore();
+  }
+
+  drawBall (game) {
+    if (this.ball) {
+      game.ctx.save();
+      game.ctx.translate(game.cellWidth * this.x + game.cellWidth2, game.cellHeight * this.y + game.cellHeight2);
+      this.ball.drawBall(game);
+      game.ctx.restore();
+    }
   }
 
 }
@@ -75,6 +86,7 @@ class Game {
     this.from = null;
     this.height = 0;
     this.width = 0;
+    this.delay = 0;
     this.cellHeight = 0;
     this.cellWidth = 0;
     this.cellHeight2 = 0;
@@ -126,7 +138,7 @@ class Game {
       }
       this.field.push(row);
     }
-    this.generateBalls();
+
   }
 
   init() {
@@ -140,7 +152,7 @@ class Game {
     this.cellWidth = this.width / this.fieldWidth;
     this.cellHeight2 = this.cellHeight / 2;
     this.cellWidth2 = this.cellWidth / 2;
-
+    this.generateBalls();
   }
 
   addColorOnLvlUp() {
@@ -169,10 +181,10 @@ class Game {
     this.levelUpIfNeeded();
   }
 
-  checkAll(x, y, cell) {
-    if (cell.ball !== null) {
+  checkAll(x, y, ball) {
+    if (ball !== null) {
       let state = false;
-      let colorIdx = cell.ball.colorIdx;
+      let colorIdx = ball.colorIdx;
       let selected = this.field[y][x];
 
       let state1 = this.check(x, y, 1, 0, colorIdx);
@@ -204,7 +216,7 @@ class Game {
   }
 
   prepareNextMove (x, y, cell) {
-    if (!this.checkAll(x, y, cell)) {
+    if (!this.checkAll(x, y, cell.ball)) {
       if (this.generateBalls() !== true) {
         this.isGameOver = true;
       }
@@ -233,7 +245,8 @@ class Game {
     } else {
       if (this.from) {
         this.from.handleSelect (false, this);
-        cellPressed.ball = this.from.ball;
+        cellPressed.setBall(this.from.ball);
+        cellPressed.ball.hoover(this.from.x, this.from.y);
         this.from.ball = null;
         this.from = null;
         this.prepareNextMove(cellX, cellY, cellPressed);
@@ -270,13 +283,15 @@ class Game {
     idx = Math.floor(Math.random() * emptyCells.length);
     let selectedCell = emptyCells[idx];
     selectedCell.ball = this.createBall(selectedCell.x, selectedCell.y);
+    selectedCell.ball.appear(this.delay);
+    this.delay = this.delay + 100;
     return selectedCell;
   }
 
   checkBalls(state) {
     for (let cell of state) {
       if (cell !== null) {
-        this.checkAll(cell.x, cell.y, cell);
+        this.checkAll(cell.x, cell.y, cell.ball);
       } else {
         alert('Error!!!');
       }
@@ -305,10 +320,12 @@ class Game {
     }
     let empty = this.findEmptyCells();
     if (empty.length === 0) {
+      this.delay = 0;
       return false;
     }
      else {
       this.checkBalls(state);
+      this.delay = 0;
       return true;
     }
   }
@@ -316,7 +333,7 @@ class Game {
   createBall(x, y) {
     let colorIdx = Math.floor(Math.random() * (this.newColorIdx+1));
     let color = this.possibleBallColors[colorIdx];
-    return new Ball(x, y, colorIdx, color);
+    return new Ball(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
   }
 
   check(x, y, deltaY, deltaX, colorIdx) {
@@ -366,6 +383,11 @@ class Game {
         cell.drawCell(this);
       }
     }
+    for (let y of this.field) {
+      for (let cell of y) {
+        cell.drawBall(this);
+      }
+    }
     this.ctx.restore();
   }
 
@@ -393,23 +415,58 @@ class Game {
 }
 
 class Ball {
-  constructor(x, y, colorIdx, color) {
+  constructor(x, y, colorIdx, color, cellWidth, cellHeight) {
     this.colorIdx = colorIdx;
     this.color = color;
     this.px = 0;
     this.py = 0;
     this.x = x;
     this.y = y;
-    this.scaleX = 1;
-    this.scaleY = 1;
+    this.scaleX = 0;
+    this.scaleY = 0;
+    this.cellWidth = cellWidth;
+    this.cellHeight = cellHeight;
     this.selectedTween = null;
+  }
+
+  xy2screen (x, y) {
+    let pX = x*this.cellWidth+this.cellWidth/2;
+    let pY = y*this.cellHeight+this.cellHeight/2;
+    return {pX:pX, pY:pY};
+  }
+
+  hoover (oldx, oldy) {
+    let oldP = this.xy2screen(oldx, oldy);
+    let p = this.xy2screen(this.x, this.y);
+    let mx = p.pX-oldP.pX;
+    let my = p.pY-oldP.pY;
+
+    this.px = -mx;
+    this.py = -my;
+
+    let scaling = new TWEEN.Tween(this).to({scaleX:1.5, scaleY:1.5}, 250)
+      .easing(TWEEN.Easing.Quadratic.Out)
+      .chain(new TWEEN.Tween(this).to({scaleX:1, scaleY:1}, 250)
+        .easing(TWEEN.Easing.Quadratic.In)).start();
+    let animation = new TWEEN.Tween(this).to({px:0, py:0}, 500).easing(TWEEN.Easing.Quadratic.InOut)
+      .start();
+
+  }
+
+  appear (delay=0) {
+    let animation = new TWEEN.Tween(this).to({scaleX:1, scaleY:1}, 400)
+                                          .easing(TWEEN.Easing.Quadratic.In).delay(delay);
+    animation.start();
   }
 
   selected (game) {
     console.log('Selected ', this);
-    let goDown = new TWEEN.Tween(this).to({py: 0, scaleY:1, scaleX:1}, 300).easing(TWEEN.Easing.Quadratic.In);
-    let squeeze = new TWEEN.Tween(this).to({scaleX: 1.25, scaleY:0.75, py:game.cellHeight/8}, 300).easing(TWEEN.Easing.Quadratic.Out);
-    let unsqueeze = new TWEEN.Tween(this).to({scaleX: 1, scaleY:1, py: 0}, 200).easing(TWEEN.Easing.Quadratic.In);
+    let goDown = new TWEEN.Tween(this).to({py: 0, scaleY:1, scaleX:1}, 300)
+                                      .easing(TWEEN.Easing.Quadratic.In);
+    let squeeze = new TWEEN.Tween(this).to({scaleX: 1.25, scaleY:0.75, py:game.cellHeight/8}, 300)
+                                      .easing(TWEEN.Easing.Quadratic.Out);
+    let unsqueeze = new TWEEN.Tween(this).to({scaleX: 1, scaleY:1, py: 0}, 200)
+                                          .easing(TWEEN.Easing.Quadratic.In);
 
     this.selectedTween = new TWEEN.Tween(this)
                   .to({py: -game.cellHeight/4, scaleY: 1.05, scaleX: 0.95}, 500)
