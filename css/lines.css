@@ -5,7 +5,16 @@
   margin: auto;
 }
 
+@font-face {
+  font-family: 'MainFont';
+  src: url('../fonts/mainfont.ttf')  format('truetype');
+}
+
 .forGame {
   display: flex;
   justify-content: center;
+}
+
+body {
+  font-family: 'MainFont', Fallback, sans-serif;
 }
