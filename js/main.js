@@ -156,11 +156,18 @@ class Game {
     this.earnedScore = 0;
     this.multiplier = 1;
     this.level = 1;
-    this.levelToExpand = 1;
+    this.levelToExpand = 5;
+    this.levelToContract = 3;
     this.scoreToLevelUp = 250;
     this.levelToAddColor = 3;
     this.isGameOver = false;
 
+    if (this.height) {
+      this.cellHeight = this.height / this.fieldHeight;
+      this.cellWidth = this.width / this.fieldWidth;
+      this.cellHeight2 = this.cellHeight / 2;
+      this.cellWidth2 = this.cellWidth / 2;
+    }
     this.newColorIdx = 2;
     this.field = [];
     this.oldField = [];
@@ -212,6 +219,7 @@ class Game {
       this.scoreToLevelUp = Math.ceil(this.scoreToLevelUp + 250 * this.multiplier);
       this.addColorOnLvlUp();
       this.expandOnLvlUp();
+      this.contractOnLvlUp();
     }
   }
 
@@ -411,6 +419,76 @@ class Game {
     }
   }
 
+  contractAnimation () {
+    let scaleFactor = this.fieldWidth/(this.fieldWidth+2);
+    this.scaleX = scaleFactor;
+    this.scaleY = scaleFactor;
+    let animation = new TWEEN.Tween(this).to({scaleX:1, scaleY:1}, 1000).easing(TWEEN.Easing.Back.Out).start();
+  }
+
+  contractOnLvlUp () {
+    if (this.level%this.levelToContract === 0) {
+      this.contractRemoveBalls();
+    }
+  }
+
+  contractRemoveBalls () {
+    let balls = [];
+    for (let xidx = 0; xidx < this.fieldWidth; xidx++) {
+      let row1 = this.field[0];
+      let row2 = this.field[this.fieldHeight - 1];
+      let cell1 = row1[xidx];
+      let cell2 = row2[xidx];
+      if (cell1.ball) {
+        balls.push(cell1);
+      }
+      if (cell2.ball) {
+        balls.push(cell2);
+      }
+    }
+    for (let yidx = 1; yidx < this.fieldHeight - 1; yidx++) {
+      let cell1 = this.field[yidx][0];
+      let cell2 = this.field[yidx][this.fieldWidth - 1];
+      if (cell1.ball) {
+        balls.push(cell1);
+      }
+      if (cell2.ball) {
+        balls.push(cell2);
+      }
+    }
+    this.removeBalls(balls, (_cell,isLast) => {if (isLast){this.contractField()}});
+  }
+
+  contractField () {
+    this.scaleY = 1;
+    this.scaleX = 1;
+    this.oldField = this.field;
+    this.fieldHeight -= 2;
+    this.fieldWidth -= 2;
+    this.field = [];
+    this.cellHeight = this.height / this.fieldHeight;
+    this.cellWidth = this.width / this.fieldWidth;
+    this.cellHeight2 = this.cellHeight / 2;
+    this.cellWidth2 = this.cellWidth / 2;
+    this.initField();
+    for (let idx = 1; idx < this.oldField.length-1; idx ++) {
+      let row = this.oldField[idx];
+      for (let cellIdx = 1; cellIdx < row.length-1; cellIdx++) {
+        let cell = row[cellIdx];
+        cell.x--;
+        cell.y--;
+        let x = cell.x;
+        let y = cell.y;
+        if (cell.ball) {
+          cell.ball.cellHeight = this.cellHeight;
+          cell.ball.cellWidth = this.cellWidth;
+          this.field[y][x].setBall(cell.ball);
+        }
+      }
+    }
+    this.contractAnimation();
+  }
+
   vanishCallBack(cell, isLast) {
     cell.ball = null;
     cell.handleSelect(false, this);
@@ -424,13 +502,21 @@ class Game {
     return array.length>=this.inARowToVanish;
   }
 
-  removeBalls (state) {
+  removeBalls (state, onComplete) {
     let delay = 0;
     for (let index in state) {
       let cell = state[index];
       this.changeScore(this.multiplier);
+
       cell.ball.vanish(() => {
-        this.vanishCallBack(cell, parseInt(index) === state.length - 1)
+        if (onComplete) {
+          cell.ball = null;
+          cell.handleSelect(false, this);
+          this.from = null;
+          onComplete(cell, parseInt(index) === state.length - 1)
+        } else {
+          this.vanishCallBack(cell, parseInt(index) === state.length - 1)
+        }
       }, delay);
       delay += 100;
     }
