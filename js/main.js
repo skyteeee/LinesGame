@@ -12,7 +12,6 @@ function xy2screen (x, y, object) {
 
 
 function onCanvasClick (event) {
-  console.log(event);
   game.onClick(event.offsetX, event.offsetY);
 }
 
@@ -112,6 +111,9 @@ class Game {
     this.height = 0;
     this.width = 0;
     this.delay = 0;
+    this.angle = 0;
+    this.scaleX = 1;
+    this.scaleY = 1;
     this.cellHeight = 0;
     this.cellWidth = 0;
     this.cellHeight2 = 0;
@@ -119,17 +121,17 @@ class Game {
     this.hudHeight = 50;
     this.drawOverAll = [];
     this.possibleBallColors = [
-      new Color(218,0,25),
-      new Color(14,109,0),
-      new Color(0,158,255),
-      new Color(255,91,0),
-      new Color(255,203,1),
-      new Color(0,0,255),
-      new Color(125,0,125)
+      new Color(218, 0, 25),
+      new Color(14, 109, 0),
+      new Color(0, 158, 255),
+      new Color(255, 91, 0),
+      new Color(255, 203, 1),
+      new Color(0, 0, 255),
+      new Color(125, 0, 125)
     ];
   }
 
-  refresh (time) {
+  refresh(time) {
     this.animate(time);
     this.draw();
     if (this.decideToRefresh()) {
@@ -137,11 +139,11 @@ class Game {
     }
   }
 
-  animate (time) {
+  animate(time) {
     TWEEN.update(time);
   }
 
-  decideToRefresh () {
+  decideToRefresh() {
     return true;
   }
 
@@ -154,7 +156,7 @@ class Game {
     this.earnedScore = 0;
     this.multiplier = 1;
     this.level = 1;
-    this.levelToExpand = 2;
+    this.levelToExpand = 1;
     this.scoreToLevelUp = 250;
     this.levelToAddColor = 3;
     this.isGameOver = false;
@@ -193,7 +195,7 @@ class Game {
 
   addColorOnLvlUp() {
     if (this.level % this.levelToAddColor === 0) {
-      if (this.newColorIdx < this.possibleBallColors.length-1) {
+      if (this.newColorIdx < this.possibleBallColors.length - 1) {
         this.newColorIdx++;
         if (this.levelToAddColor === 3) {
           this.levelToAddColor = 5;
@@ -204,25 +206,25 @@ class Game {
 
 
   levelUpIfNeeded() {
-    if (this.score+this.earnedScore >= this.scoreToLevelUp) {
+    if (this.score + this.earnedScore >= this.scoreToLevelUp) {
       this.level++;
       this.multiplier = this.multiplier * 1.25;
       this.scoreToLevelUp = Math.ceil(this.scoreToLevelUp + 250 * this.multiplier);
       this.addColorOnLvlUp();
+      this.expandOnLvlUp();
     }
   }
 
   changeScore(multiplier) {
     this.earnedScore = Math.floor(this.earnedScore + 25 * multiplier);
-    this.levelUpIfNeeded();
   }
 
-  addOverallObject (object) {
+  addOverallObject(object) {
     this.drawOverAll.push(object);
 
   }
 
-  removeOverallObject (object) {
+  removeOverallObject(object) {
     for (let idx in this.drawOverAll) {
       if (object === this.drawOverAll[idx]) {
         this.drawOverAll.splice(idx, 1);
@@ -236,6 +238,7 @@ class Game {
     if (cell.ball !== null) {
       this.earnedScore = 0;
       let state = false;
+      let ballsToRemove = [];
       let colorIdx = cell.ball.colorIdx;
       let selected = this.field[y][x];
 
@@ -243,27 +246,40 @@ class Game {
       let state4 = this.check(x, y, -1, 0, colorIdx);
       state1.push(selected);
       state1.push(...state4);
-      state |= this.removeBallsIfNeeded(state1);
+      if (this.isLineComplete(state1)) {
+        state = true;
+        ballsToRemove.push(...state1);
+      }
 
       let state2 = this.check(x, y, 0, 1, colorIdx);
       let state5 = this.check(x, y, 0, -1, colorIdx);
       state2.push(selected);
       state2.push(...state5);
-      state |= this.removeBallsIfNeeded(state2);
+      if (this.isLineComplete(state2)) {
+        state = true;
+        ballsToRemove.push(...state2);
+      }
 
       let state3 = this.check(x, y, 1, 1, colorIdx);
       let state6 = this.check(x, y, -1, -1, colorIdx);
       state3.push(selected);
       state3.push(...state6);
-      state |= this.removeBallsIfNeeded(state3);
+      if (this.isLineComplete(state3)) {
+        state = true;
+        ballsToRemove.push(...state3);
+      }
 
       let state7 = this.check(x, y, 1, -1, colorIdx);
       let state8 = this.check(x, y, -1, 1, colorIdx);
       state7.push(selected);
       state7.push(...state8);
-      state |= this.removeBallsIfNeeded(state7);
+      if (this.isLineComplete(state7)) {
+        state = true;
+        ballsToRemove.push(...state7);
+      }
 
       if (state) {
+        this.removeBalls(ballsToRemove);
         let pixel = xy2screen(x, y, this);
         let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY);
         floating.animate(this);
@@ -273,7 +289,7 @@ class Game {
     }
   }
 
-  prepareNextMove (x, y, cell) {
+  prepareNextMove(x, y, cell) {
     if (!this.checkAll(x, y, cell)) {
       if (this.generateBalls() !== true) {
         this.isGameOver = true;
@@ -292,17 +308,17 @@ class Game {
   onClick(x, y) {
     this.operateGameOver();
     let cellX = Math.floor(x / this.cellWidth);
-    let cellY = Math.floor((y-this.hudHeight) / this.cellHeight);
+    let cellY = Math.floor((y - this.hudHeight) / this.cellHeight);
     let cellPressed = this.field[cellY][cellX];
     if (cellPressed.ball !== null) {
       if (this.from) {
-        this.from.handleSelect (false, this);
+        this.from.handleSelect(false, this);
       }
       this.from = cellPressed;
-      cellPressed.handleSelect (true, this);
+      cellPressed.handleSelect(true, this);
     } else {
       if (this.from) {
-        this.from.handleSelect (false, this);
+        this.from.handleSelect(false, this);
         cellPressed.setBall(this.from.ball);
         cellPressed.ball.hoover(this.from.x, this.from.y);
         this.from.ball = null;
@@ -356,21 +372,68 @@ class Game {
     }
   }
 
-  // expandOnLvlUp() {
-  //
-  // }
-
-  removeBallsIfNeeded (state) {
-    if (state.length >= this.inARowToVanish) {
-      let delay = 0;
-      for (let cell of state) {
-        this.changeScore(this.multiplier);
-        cell.ball.vanish(()=>{cell.ball = null; cell.handleSelect(false, this); this.from = null}, delay);
-        delay += 100;
-      }
-      return true;
+  expandOnLvlUp() {
+    if (this.level % this.levelToExpand === 0) {
+      this.expandAnimation();
     }
-    return false;
+  }
+
+  expandAnimation () {
+    let scaleFactor = this.fieldWidth/(this.fieldWidth+2);
+    let animation = new TWEEN.Tween(this).to({scaleX:scaleFactor, scaleY:scaleFactor},1000)
+      .easing(TWEEN.Easing.Back.In).onComplete(() => {this.expandField()}).start();
+  }
+
+  expandField() {
+    this.scaleY = 1;
+    this.scaleX = 1;
+    this.oldField = this.field;
+    this.fieldHeight += 2;
+    this.fieldWidth += 2;
+    this.field = [];
+    this.cellHeight = this.height / this.fieldHeight;
+    this.cellWidth = this.width / this.fieldWidth;
+    this.cellHeight2 = this.cellHeight / 2;
+    this.cellWidth2 = this.cellWidth / 2;
+    this.initField();
+    for (let row of this.oldField) {
+      for (let cell of row) {
+        cell.x++;
+        cell.y++;
+        let x = cell.x;
+        let y = cell.y;
+        if (cell.ball) {
+          cell.ball.cellHeight = this.cellHeight;
+          cell.ball.cellWidth = this.cellWidth;
+          this.field[y][x].setBall(cell.ball);
+        }
+      }
+    }
+  }
+
+  vanishCallBack(cell, isLast) {
+    cell.ball = null;
+    cell.handleSelect(false, this);
+    this.from = null;
+    if (isLast) {
+      this.levelUpIfNeeded();
+    }
+  }
+
+  isLineComplete (array) {
+    return array.length>=this.inARowToVanish;
+  }
+
+  removeBalls (state) {
+    let delay = 0;
+    for (let index in state) {
+      let cell = state[index];
+      this.changeScore(this.multiplier);
+      cell.ball.vanish(() => {
+        this.vanishCallBack(cell, parseInt(index) === state.length - 1)
+      }, delay);
+      delay += 100;
+    }
   }
 
   generateBalls () {
@@ -447,6 +510,11 @@ class Game {
   drawFieldContent () {
     this.ctx.save();
     this.ctx.translate(0, this.hudHeight);
+    if (this.scaleX<1) {
+      this.ctx.translate(this.width/2, this.gameHeight/2);
+      this.ctx.scale(this.scaleX, this.scaleY);
+      this.ctx.translate(-this.width/2, -this.gameHeight/2);
+    }
     for (let y of this.field) {
       for (let cell of y) {
         cell.drawCell(this);
@@ -512,7 +580,6 @@ class ScoreFloat {
       game.ctx.fillStyle = `rgba(14,109,0, ${this.opacity})`;
       game.ctx.strokeStyle = `rgba(255,255,255, ${this.opacity})`;
       game.ctx.strokeWidth = 1;
-      let color = 'rgb(14,156,0)';
       game.ctx.font = 'bold 32px MainFont';
       game.ctx.textAlign = 'center';
       game.ctx.fillText(`${this.score}`, 0, 0);
@@ -570,7 +637,6 @@ class Ball {
   }
 
   selected (game) {
-    console.log('Selected ', this);
     let goDown = new TWEEN.Tween(this).to({py: 0, scaleY:1, scaleX:1}, 300)
                                       .easing(TWEEN.Easing.Quadratic.In);
     let squeeze = new TWEEN.Tween(this).to({scaleX: 1.25, scaleY:0.75, py:game.cellHeight/8}, 300)
@@ -589,7 +655,6 @@ class Ball {
   }
 
   deselect (game) {
-    console.log('Deselected ', this);
     this.selectedTween.stop();
     this.selectedTween = null;
     this.py = 0;
@@ -603,8 +668,10 @@ class Ball {
     let x = -game.cellWidth2;
     let y = -game.cellHeight2;
     let color = this.color.iRequestNormalColor();
+    let xy0 = Math.floor(this.cellHeight*0.15);
+    let radius = Math.floor(this.cellWidth*0.3125);
 
-    let gradient = game.ctx.createRadialGradient(-12, -12, 0, 0, 0, 25);
+    let gradient = game.ctx.createRadialGradient(-xy0, -xy0, 0, 0, 0, radius);
 
     gradient.addColorStop(0, 'white');
     gradient.addColorStop(0.7, color);
