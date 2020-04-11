@@ -15,6 +15,16 @@ function onCanvasClick (event) {
   game.onClick(event.offsetX, event.offsetY);
 }
 
+function intersection(setA, setB) {
+  let _intersection = new Set();
+  for (let elem of setB) {
+    if (setA.has(elem)) {
+      _intersection.add(elem);
+    }
+  }
+  return _intersection;
+}
+
 class Cell {
   constructor(x, y) {
   this.x = x;
@@ -36,7 +46,7 @@ class Cell {
       this.ball.selected(game);
     } else {
       if (this.ball) {
-        this.ball.deselect(game);
+        this.ball.deselect();
       }
     }
   }
@@ -97,11 +107,21 @@ class Color {
     this.alpha = a;
   }
 
+  clone () {
+    return new Color(this.red, this.green, this.blue, this.alpha);
+  }
+
   iRequestNormalColor () {
     return `rgba(${this.red},${this.green},${this.blue},${this.alpha})`;
   }
 
 }
+
+const expansionBall = 'expansion';
+const doubleBall = 'double';
+const regular = 'regular';
+const rainbow = 'rainbow';
+const contractionBall = 'contraction';
 
 class Game {
   constructor() {
@@ -123,13 +143,14 @@ class Game {
     this.blockClick = false;
     this.possibleBallColors = [
       new Color(218, 0, 25),
-      new Color(14, 109, 0),
-      new Color(0, 158, 255),
       new Color(255, 91, 0),
       new Color(255, 203, 1),
+      new Color(14, 109, 0),
+      new Color(0, 158, 255),
       new Color(0, 0, 255),
       new Color(125, 0, 125)
     ];
+    this.possibleBallTypes = [regular, regular, regular, doubleBall, regular, regular, regular, regular, regular, regular];
   }
 
   refresh(time) {
@@ -157,8 +178,8 @@ class Game {
     this.earnedScore = 0;
     this.multiplier = 1;
     this.level = 1;
-    this.levelToExpand = 10;
-    this.levelToContract = 7;
+    this.levelToExpand = 5;
+    this.levelToContract = 3;
     this.scoreToLevelUp = 100;
     this.levelToAddColor = 3;
     this.isGameOver = false;
@@ -221,8 +242,9 @@ class Game {
     }
   }
 
-  changeScore(multiplier) {
-    this.earnedScore = Math.floor(this.earnedScore + 5 * multiplier);
+  changeScore(multiplier, ball) {
+    let score = ball.getScore()
+    this.earnedScore = Math.floor(this.earnedScore + score * multiplier);
   }
 
   addBlockedCell (cell) {
@@ -266,11 +288,11 @@ class Game {
       this.earnedScore = 0;
       let state = false;
       let ballsToRemove = [];
-      let colorIdx = cell.ball.colorIdx;
+      let ball = cell.ball;
       let selected = this.field[y][x];
 
-      let state1 = this.check(x, y, 1, 0, colorIdx);
-      let state4 = this.check(x, y, -1, 0, colorIdx);
+      let state1 = this.check(x, y, 1, 0, ball);
+      let state4 = this.check(x, y, -1, 0, ball);
       state1.push(selected);
       state1.push(...state4);
       if (this.isLineComplete(state1)) {
@@ -278,8 +300,8 @@ class Game {
         ballsToRemove.push(...state1);
       }
 
-      let state2 = this.check(x, y, 0, 1, colorIdx);
-      let state5 = this.check(x, y, 0, -1, colorIdx);
+      let state2 = this.check(x, y, 0, 1, ball);
+      let state5 = this.check(x, y, 0, -1, ball);
       state2.push(selected);
       state2.push(...state5);
       if (this.isLineComplete(state2)) {
@@ -287,8 +309,8 @@ class Game {
         ballsToRemove.push(...state2);
       }
 
-      let state3 = this.check(x, y, 1, 1, colorIdx);
-      let state6 = this.check(x, y, -1, -1, colorIdx);
+      let state3 = this.check(x, y, 1, 1, ball);
+      let state6 = this.check(x, y, -1, -1, ball);
       state3.push(selected);
       state3.push(...state6);
       if (this.isLineComplete(state3)) {
@@ -296,8 +318,8 @@ class Game {
         ballsToRemove.push(...state3);
       }
 
-      let state7 = this.check(x, y, 1, -1, colorIdx);
-      let state8 = this.check(x, y, -1, 1, colorIdx);
+      let state7 = this.check(x, y, 1, -1, ball);
+      let state8 = this.check(x, y, -1, 1, ball);
       state7.push(selected);
       state7.push(...state8);
       if (this.isLineComplete(state7)) {
@@ -388,19 +410,21 @@ class Game {
 
   }
 
+  addBallToField (selectedCell) {
+    selectedCell.ball = this.createBall(selectedCell.x, selectedCell.y);
+    selectedCell.ball.appear(this.delay, () => {
+      this.removeBlockedCell(selectedCell);
+    });
+    this.delay = this.delay + 100;
+  }
+
   initRandomCell(emptyCells) {
     let idx;
     if (emptyCells.length === 0) {
       return null;
     }
     idx = Math.floor(Math.random() * emptyCells.length);
-    let selectedCell = emptyCells[idx];
-    selectedCell.ball = this.createBall(selectedCell.x, selectedCell.y);
-    selectedCell.ball.appear(this.delay, () => {
-      this.removeBlockedCell(selectedCell);
-    });
-    this.delay = this.delay + 100;
-    return selectedCell;
+    return emptyCells[idx];
   }
 
   checkBalls(state) {
@@ -415,7 +439,7 @@ class Game {
 
   expandOnLvlUp() {
     if (this.level % this.levelToExpand === 0) {
-      this.expandAnimation();
+      this.possibleBallTypes.push(expansionBall);
     }
   }
 
@@ -464,7 +488,7 @@ class Game {
 
   contractOnLvlUp () {
     if (this.level%this.levelToContract === 0) {
-      this.contractRemoveBalls();
+      this.possibleBallTypes.push(contractionBall);
     }
   }
 
@@ -526,25 +550,35 @@ class Game {
   }
 
   vanishCallBack(cell, isLast) {
+    if (cell.ball instanceof ExpansionBall) {
+      this.expandAnimation();
+    }
+    if (cell.ball instanceof ContractionBall) {
+      this.contractRemoveBalls()
+    }
     cell.ball = null;
     cell.handleSelect(false, this);
     if (isLast) {
       this.levelUpIfNeeded();
     }
+
   }
 
   isLineComplete (array) {
     return array.length>=this.inARowToVanish;
   }
 
-  removeBalls (state, onComplete) {
+  removeBalls (array, onComplete) {
     let delay = 0;
-    for (let index in state) {
-      let cell = state[index];
+    if (array.length >= this.inARowToVanish+1) {
+      this.possibleBallTypes.push(rainbow);
+    }
+    for (let index in array) {
+      let cell = array[index];
       this.addBlockedCell(cell);
-      this.changeScore(this.multiplier);
+      this.changeScore(this.multiplier, cell.ball);
       cell.ball.vanish(() => {
-        let isLast = parseInt(index) === state.length-1;
+        let isLast = parseInt(index) === array.length-1;
         this.removeBlockedCell(cell);
         if (onComplete) {
           cell.ball = null;
@@ -563,6 +597,7 @@ class Game {
     for (let idx = 0; idx < this.ballsPerTime; idx++) {
       let element = this.initRandomCell(this.findEmptyCells());
       if (element !== null) {
+        this.addBallToField(element);
         state.push(element);
         this.addBlockedCell(element);
       }
@@ -580,30 +615,66 @@ class Game {
   }
 
   createBall(x, y) {
-    let colorIdx = Math.floor(Math.random() * (this.newColorIdx+1));
-    let color = this.possibleBallColors[colorIdx];
-    return new Ball(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
+    let ballType = this.possibleBallTypes [Math.floor(Math.random() * this.possibleBallTypes.length)];
+    console.log(ballType);
+    switch (ballType) {
+      case regular: {
+        let colorIdx = Math.floor(Math.random() * (this.newColorIdx + 1));
+        let color = this.possibleBallColors[colorIdx];
+        return new RegularBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
+      }
+      case rainbow: {
+        let index = this.possibleBallTypes.findIndex((item) => {return item === rainbow});
+        this.possibleBallTypes.splice(index, 1);
+        return new RainbowBall(x, y, this.cellHeight, this.cellWidth, this.possibleBallColors);
+      }
+      case doubleBall: {
+        let colorIdx1 = Math.floor(Math.random() * (this.newColorIdx + 1));
+        let colorIdx2 = Math.floor(Math.random() * (this.newColorIdx + 1));
+        while (colorIdx1 === colorIdx2) {
+          colorIdx2 = Math.floor(Math.random() * (this.newColorIdx + 1));
+        }
+        console.log('Double ball color indexes are ', colorIdx1, ', ', colorIdx2);
+        return new DoubleBall(x, y, this.cellWidth, this.cellHeight, colorIdx1, colorIdx2, this.possibleBallColors);
+      }
+      case expansionBall: {
+        let index = this.possibleBallTypes.findIndex((item) => {return item === expansionBall});
+        this.possibleBallTypes.splice(index, 1);
+        let colorIdx = Math.floor(Math.random() * (this.newColorIdx + 1));
+        let color = this.possibleBallColors[colorIdx];
+        return new ExpansionBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
+      }
+      case contractionBall: {
+        let index = this.possibleBallTypes.findIndex((item) => {return item === contractionBall});
+        this.possibleBallTypes.splice(index, 1);
+        let colorIdx = Math.floor(Math.random() * (this.newColorIdx + 1));
+        let color = this.possibleBallColors[colorIdx];
+        return new ContractionBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
+      }
+    }
   }
 
-  check(x, y, deltaY, deltaX, colorIdx) {
+  check(x, y, deltaY, deltaX, ball) {
     let originalDY = deltaY;
     let originalDX = deltaX;
     let inARow = [];
+    let colorSet = ball.colors;
 
     while (y+deltaY < this.fieldHeight && x+deltaX < this.fieldWidth
           && y+deltaY >= 0 && x+deltaX >= 0) {
 
-      if (this.field[y + deltaY][x + deltaX]) {
-        let element = this.field[y + deltaY][x + deltaX];
-        if (element.ball === null || element.ball.colorIdx !== colorIdx) {
-          return inARow;
-        } else {
+      let element = this.field[y + deltaY][x + deltaX];
+      if (element.ball !== null) {
+        colorSet = intersection(colorSet, element.ball.colors);
+        if (colorSet.size !== 0) {
           inARow.push(element);
-
-          deltaY = deltaY + originalDY;
-          deltaX = deltaX + originalDX;
-
+          deltaX += originalDX;
+          deltaY += originalDY;
+        } else {
+          break;
         }
+      } else {
+        break;
       }
     }
     return inARow;
@@ -712,27 +783,35 @@ class ScoreFloat {
 }
 
 class Ball {
-  constructor(x, y, colorIdx, color, cellWidth, cellHeight) {
-    this.colorIdx = colorIdx;
-    this.color = new Color(color.red, color.green, color.blue);
+  constructor(x, y, cellWidth, cellHeight) {
     this.px = 0;
     this.py = 0;
     this.x = x;
     this.y = y;
     this.scaleX = 0;
     this.scaleY = 0;
+    this.colors = new Set();
     this.cellWidth = cellWidth;
     this.cellHeight = cellHeight;
     this.selectedTween = null;
   }
 
+  getScore () {
+    return 0;
+  }
 
+  getType () {
+    return 'ball';
+  }
+
+  drawBall (game) {
+    game.ctx.translate (this.px, this.py);
+    game.ctx.scale(this.scaleX, this.scaleY);
+  }
 
   vanish (onComplete,delay = 0) {
-      let alphaChange = new TWEEN.Tween(this.color).to({alpha:0},300).easing(TWEEN.Easing.Quadratic.In)
-        .delay(delay).start();
-      let rescale = new TWEEN.Tween(this).to({scaleX:5, scaleY:5}, 300).easing(TWEEN.Easing.Quadratic.In)
-        .delay(delay).onComplete(onComplete).start();
+    let rescale = new TWEEN.Tween(this).to({scaleX: 5, scaleY: 5}, 300).easing(TWEEN.Easing.Quadratic.In)
+      .delay(delay).onComplete(onComplete).start();
   }
 
   hoover (oldx, oldy) {
@@ -755,39 +834,60 @@ class Ball {
 
   appear (delay= 0, callback) {
     let animation = new TWEEN.Tween(this).to({scaleX:1, scaleY:1}, 400)
-                                          .easing(TWEEN.Easing.Quadratic.In).onComplete(callback).delay(delay);
+      .easing(TWEEN.Easing.Quadratic.In).onComplete(callback).delay(delay);
     animation.start();
   }
 
   selected (game) {
     let goDown = new TWEEN.Tween(this).to({py: 0, scaleY:1, scaleX:1}, 300)
-                                      .easing(TWEEN.Easing.Quadratic.In);
+      .easing(TWEEN.Easing.Quadratic.In);
     let squeeze = new TWEEN.Tween(this).to({scaleX: 1.25, scaleY:0.75, py:game.cellHeight/8}, 300)
-                                      .easing(TWEEN.Easing.Quadratic.Out);
+      .easing(TWEEN.Easing.Quadratic.Out);
     let unsqueeze = new TWEEN.Tween(this).to({scaleX: 1, scaleY:1, py: 0}, 200)
-                                          .easing(TWEEN.Easing.Quadratic.In);
+      .easing(TWEEN.Easing.Quadratic.In);
 
     this.selectedTween = new TWEEN.Tween(this)
-                  .to({py: -game.cellHeight/4, scaleY: 1.05, scaleX: 0.95}, 500)
-                  .easing(TWEEN.Easing.Quadratic.Out)
-                  .chain(goDown);
+      .to({py: -game.cellHeight/4, scaleY: 1.05, scaleX: 0.95}, 500)
+      .easing(TWEEN.Easing.Quadratic.Out)
+      .chain(goDown);
     goDown.chain(squeeze);
     squeeze.chain(unsqueeze);
     unsqueeze.chain(this.selectedTween);
     this.selectedTween.start();
   }
 
-  deselect (game) {
+  deselect () {
     this.selectedTween.stop();
     this.selectedTween = null;
     this.py = 0;
     this.scaleX = 1;
     this.scaleY = 1;
   }
+}
+
+class RegularBall extends Ball {
+  constructor(x, y, colorIdx, color, cellWidth, cellHeight) {
+    super(x,y,cellWidth, cellHeight);
+    this.colors.add(colorIdx);
+    this.color = color.clone();
+  }
+
+  getScore() {
+    return 5;
+  }
+
+  getType() {
+    return regular;
+  }
+
+  vanish (onComplete,delay = 0) {
+    super.vanish(onComplete, delay);
+    let alphaChange = new TWEEN.Tween(this.color).to({alpha:0},300).easing(TWEEN.Easing.Quadratic.In)
+      .delay(delay).start();
+  }
 
   drawBall (game) {
-    game.ctx.translate (this.px, this.py);
-    game.ctx.scale(this.scaleX, this.scaleY);
+    super.drawBall(game);
     let x = -game.cellWidth2;
     let y = -game.cellHeight2;
     let color = this.color.iRequestNormalColor();
@@ -803,6 +903,142 @@ class Ball {
 
     game.ctx.fillStyle = gradient;
     game.ctx.fillRect(x, y, game.cellWidth, game.cellHeight);
+  }
+}
+
+class RainbowBall extends Ball {
+  constructor(x, y, cellHeight, cellWidth, possibleColors) {
+    super(x, y, cellWidth, cellHeight);
+    this.actualColors = [];
+    for (let idx in possibleColors) {
+      let color = possibleColors[idx];
+      this.colors.add(parseInt(idx));
+      this.actualColors.push(new Color(color.red, color.green, color.blue));
+    }
+  }
+
+  getScore() {
+    return 25;
+  }
+
+  getType() {
+    return rainbow;
+  }
+
+  drawBall(game) {
+    super.drawBall(game);
+    let x = -game.cellWidth2;
+    let y = -game.cellHeight2;
+    let xy0 = Math.floor(this.cellHeight * 0.15);
+    let xy1 = Math.floor(this.cellHeight * 0.16);
+    let radius = Math.floor(this.cellWidth * 0.3125);
+    let gradient = game.ctx.createRadialGradient(-xy0, -xy0, 0, 0, 0, radius);
+    let gradient2 = game.ctx.createRadialGradient(xy1, xy1, 0, 0, 0, radius);
+    let rainbowGradient = game.ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+
+    gradient.addColorStop(0, 'white');
+    gradient2.addColorStop(0, 'rgba(255,255,255,0.7)');
+    gradient.addColorStop(0.8, 'rgba(255,255,255,0)');
+    gradient2.addColorStop(0.7, 'rgba(255,255,255,0)');
+    let gidx = 0;
+    for (let color of this.actualColors) {
+      rainbowGradient.addColorStop(gidx, color.iRequestNormalColor());
+      gidx += 0.15;
+    }
+    rainbowGradient.addColorStop(1, 'transparent');
+    gradient.addColorStop(1, 'transparent');
+    gradient2.addColorStop(1, 'transparent');
+
+    game.ctx.fillStyle = rainbowGradient;
+    game.ctx.fillRect(x, y, game.cellWidth, game.cellHeight);
+    game.ctx.fillStyle = gradient;
+    game.ctx.fillRect(x, y, game.cellWidth, game.cellHeight);
+    game.ctx.fillStyle = gradient2;
+    game.ctx.fillRect(x, y, game.cellWidth, game.cellHeight);
+  }
+}
+
+class DoubleBall extends Ball{
+  constructor(x, y, cellWidth, cellHeight, colorIdx1, colorIdx2, possibleColors) {
+    super(x,y,cellWidth, cellHeight);
+    let fakeColor1 = possibleColors[colorIdx1];
+    let fakeColor2 = possibleColors[colorIdx2];
+    this.color1 = fakeColor1.clone();
+    this.color2 = fakeColor2.clone();
+    this.colors.add(colorIdx1);
+    this.colors.add(colorIdx2);
+  }
+
+  getScore() {
+    return 10;
+  }
+
+  drawBall(game) {
+    super.drawBall(game);
+    let x = -game.cellWidth2;
+    let y = -game.cellHeight2;
+    let xy0 = Math.floor(this.cellHeight * 0.15);
+    let xy1 = Math.floor(this.cellHeight * 0.16);
+    let radius = Math.floor(this.cellWidth * 0.3125);
+    let gradient = game.ctx.createRadialGradient(-xy0, -xy0, 0, 0, 0, radius);
+    let gradient2 = game.ctx.createRadialGradient(xy1, xy1, 0, 0, 0, radius);
+    let rainbowGradient = game.ctx.createLinearGradient(radius, radius, -radius, -radius);
+
+    gradient.addColorStop(0, 'white');
+    gradient2.addColorStop(0, 'rgba(255,255,255,0.7)');
+    gradient.addColorStop(0.8, 'rgba(255,255,255,0)');
+    gradient2.addColorStop(0.7, 'rgba(255,255,255,0)');
+
+    rainbowGradient.addColorStop(0, this.color1.iRequestNormalColor());
+    rainbowGradient.addColorStop(0.49, this.color1.iRequestNormalColor());
+    rainbowGradient.addColorStop(0.51, this.color2.iRequestNormalColor());
+    rainbowGradient.addColorStop(1, this.color2.iRequestNormalColor());
+
+    rainbowGradient.addColorStop(1, 'transparent');
+    gradient.addColorStop(1, 'transparent');
+    gradient2.addColorStop(1, 'transparent');
+
+    game.ctx.fillStyle = rainbowGradient;
+    game.ctx.beginPath();
+    game.ctx.arc(0, 0, radius, 0, Math.PI*2);
+    game.ctx.fill();
+    game.ctx.strokeStyle = 'rgba(68,68,68,0.5)';
+    game.ctx.strokeWidth = 1;
+    game.ctx.stroke();
+    game.ctx.fillStyle = gradient;
+    game.ctx.fillRect(x, y, game.cellWidth, game.cellHeight);
+    // game.ctx.fillStyle = gradient2;
+    // game.ctx.fillRect(x, y, game.cellWidth, game.cellHeight);
+  }
+}
+
+class ExpansionBall extends RegularBall {
+    drawBall(game) {
+      super.drawBall(game);
+      game.ctx.fillStyle = 'white';
+      game.ctx.strokeStyle = 'black';
+      game.ctx.strokeWidth = 1;
+      game.ctx.font = `bold ${this.cellHeight*0.2}px MainFont`;
+      game.ctx.textAlign = 'center';
+      game.ctx.textBaseline = 'top';
+
+      game.ctx.fillText('E', 0, -this.cellHeight*0.065);
+      game.ctx.strokeText('E', 0, -this.cellHeight*0.065);
+    }
+}
+
+class ContractionBall extends RegularBall {
+  drawBall(game) {
+    super.drawBall(game);
+    game.ctx.fillStyle = 'black';
+    game.ctx.strokeStyle = 'white';
+    game.ctx.strokeWidth = 1;
+    game.ctx.font = `bold ${this.cellHeight*0.2}px MainFont`;
+    game.ctx.textAlign = 'center';
+    game.ctx.textBaseline = 'top';
+
+    game.ctx.fillText('C', 0, -this.cellHeight*0.065);
+    game.ctx.strokeText('C', 0, -this.cellHeight*0.065);
   }
 }
 
