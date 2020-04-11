@@ -25,11 +25,15 @@
 
 </head>
 
-<body onload="init()">
+<body onload="init()" onresize="onResize()">
 
   <h1 class="forGame">Lines Game!</h1>
   <div class="forGame">
-    <canvas id="field" width="800" height="850" onclick="onCanvasClick(event)"></canvas>
+    <div class="center">
+    <div class="canvasHolder">
+    <canvas id="field" onclick="onCanvasClick(event)"></canvas>
+    </div>
+  </div>
   </div>
 
 </body>

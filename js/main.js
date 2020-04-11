@@ -10,6 +10,9 @@ function xy2screen (x, y, object) {
   return {pX: pX, pY: pY};
 }
 
+function onResize() {
+  game.resize();
+}
 
 function onCanvasClick (event) {
   game.onClick(event.offsetX, event.offsetY);
@@ -137,7 +140,7 @@ class Game {
     this.cellWidth = 0;
     this.cellHeight2 = 0;
     this.cellWidth2 = 0;
-    this.hudHeight = 50;
+    this.hudHeight = 0;
     this.blockedCells = [];
     this.drawOverAll = [];
     this.blockClick = false;
@@ -151,6 +154,28 @@ class Game {
       new Color(125, 0, 125)
     ];
     this.possibleBallTypes = [regular, regular, regular, doubleBall, regular, regular, regular, regular, regular, regular];
+  }
+
+  resize () {
+    console.log('resizing');
+    this.gameHeight = this.canvas.offsetHeight;
+    this.width = this.canvas.offsetWidth;
+    this.hudHeight = this.gameHeight-this.width;
+    this.height = this.gameHeight - this.hudHeight;
+    this.cellHeight = this.height / this.fieldHeight;
+    this.cellWidth = this.width / this.fieldWidth;
+    this.cellHeight2 = this.cellHeight / 2;
+    this.cellWidth2 = this.cellWidth / 2;
+    this.canvas.width = this.width;
+    this.canvas.height = this.gameHeight;
+    for (let row of this.field) {
+      for (let cell of row) {
+        if (cell.ball) {
+          cell.ball.cellWidth = this.cellWidth;
+          cell.ball.cellHeight = this.cellHeight;
+        }
+      }
+    }
   }
 
   refresh(time) {
@@ -170,7 +195,7 @@ class Game {
   }
 
   initGame() {
-    this.ballsPerTime = 5;
+    this.ballsPerTime = 3;
     this.inARowToVanish = 5;
     this.fieldHeight = 10;
     this.fieldWidth = 10;
@@ -212,13 +237,20 @@ class Game {
     this.initGame();
     this.canvas = document.getElementById('field');
     this.ctx = this.canvas.getContext('2d');
-    this.height = this.canvas.offsetHeight - this.hudHeight;
+
     this.gameHeight = this.canvas.offsetHeight;
     this.width = this.canvas.offsetWidth;
+    this.hudHeight = this.gameHeight-this.width;
+    this.height = this.gameHeight - this.hudHeight;
     this.cellHeight = this.height / this.fieldHeight;
     this.cellWidth = this.width / this.fieldWidth;
     this.cellHeight2 = this.cellHeight / 2;
     this.cellWidth2 = this.cellWidth / 2;
+    this.canvas.width = this.width;
+    this.canvas.height = this.gameHeight;
+
+
+    console.log('canvas size is ', this.gameHeight, ':', this.width);
     this.generateBalls();
   }
 
@@ -687,17 +719,18 @@ class Game {
   }
 
   drawHUD () {
-    let offsetY = 18;
-    let offsetX = 10;
-    this.ctx.font = 'bold 22px MainFont';
+    let offsetY = this.hudHeight*0.36;
+    let offsetX = this.hudHeight*0.2;
+    let textHeight = this.hudHeight*0.44;
+    this.ctx.font = `bold ${textHeight}px MainFont`;
     this.ctx.textBaseline = 'top';
     this.ctx.textAlign = 'start';
     this.ctx.fillStyle = 'rgb(98,98,98)';
     this.ctx.fillText(`Score: ${Math.floor(this.score)}`, offsetX, offsetY);
     this.ctx.textAlign = 'end';
-    this.ctx.fillText(`To Level Up: ${Math.floor(this.scoreToLevelUp-this.score)}`, this.width - offsetX, offsetY);
+    this.ctx.fillText(`Lvl Up: ${Math.floor(this.scoreToLevelUp-this.score)}`, this.width - offsetX, offsetY);
     this.ctx.textAlign = 'center';
-    this.ctx.fillText(`Level: ${this.level}`, this.width/2, offsetY);
+    this.ctx.fillText(`Lvl: ${this.level}`, this.width/2, offsetY);
   }
 
 
