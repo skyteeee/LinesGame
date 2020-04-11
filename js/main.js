@@ -111,7 +111,6 @@ class Game {
     this.height = 0;
     this.width = 0;
     this.delay = 0;
-    this.angle = 0;
     this.scaleX = 1;
     this.scaleY = 1;
     this.cellHeight = 0;
@@ -119,7 +118,9 @@ class Game {
     this.cellHeight2 = 0;
     this.cellWidth2 = 0;
     this.hudHeight = 50;
+    this.blockedCells = [];
     this.drawOverAll = [];
+    this.blockClick = false;
     this.possibleBallColors = [
       new Color(218, 0, 25),
       new Color(14, 109, 0),
@@ -149,16 +150,16 @@ class Game {
 
   initGame() {
     this.ballsPerTime = 5;
-    this.inARowToVanish = 4;
+    this.inARowToVanish = 5;
     this.fieldHeight = 10;
     this.fieldWidth = 10;
     this.score = 0;
     this.earnedScore = 0;
     this.multiplier = 1;
     this.level = 1;
-    this.levelToExpand = 5;
-    this.levelToContract = 3;
-    this.scoreToLevelUp = 250;
+    this.levelToExpand = 10;
+    this.levelToContract = 7;
+    this.scoreToLevelUp = 100;
     this.levelToAddColor = 3;
     this.isGameOver = false;
 
@@ -204,9 +205,6 @@ class Game {
     if (this.level % this.levelToAddColor === 0) {
       if (this.newColorIdx < this.possibleBallColors.length - 1) {
         this.newColorIdx++;
-        if (this.levelToAddColor === 3) {
-          this.levelToAddColor = 5;
-        }
       }
     }
   }
@@ -215,8 +213,8 @@ class Game {
   levelUpIfNeeded() {
     if (this.score + this.earnedScore >= this.scoreToLevelUp) {
       this.level++;
-      this.multiplier = this.multiplier * 1.25;
-      this.scoreToLevelUp = Math.ceil(this.scoreToLevelUp + 250 * this.multiplier);
+      this.multiplier = this.multiplier * 1.2;
+      this.scoreToLevelUp = Math.ceil(this.scoreToLevelUp + 100 * this.multiplier);
       this.addColorOnLvlUp();
       this.expandOnLvlUp();
       this.contractOnLvlUp();
@@ -224,12 +222,33 @@ class Game {
   }
 
   changeScore(multiplier) {
-    this.earnedScore = Math.floor(this.earnedScore + 25 * multiplier);
+    this.earnedScore = Math.floor(this.earnedScore + 5 * multiplier);
+  }
+
+  addBlockedCell (cell) {
+    this.blockedCells.push(cell);
+  }
+
+  removeBlockedCell(cell) {
+    for (let idx in this.blockedCells) {
+      if (cell === this.blockedCells[idx]) {
+        this.blockedCells.splice(idx, 1);
+        break;
+      }
+    }
+  }
+
+  checkForBlockedCell (x,y) {
+    for (let cell of this.blockedCells) {
+      if (cell.x === x && cell.y === y) {
+        return true;
+      }
+    }
+    return false;
   }
 
   addOverallObject(object) {
     this.drawOverAll.push(object);
-
   }
 
   removeOverallObject(object) {
@@ -314,28 +333,40 @@ class Game {
   }
 
   onClick(x, y) {
-    this.operateGameOver();
-    let cellX = Math.floor(x / this.cellWidth);
-    let cellY = Math.floor((y - this.hudHeight) / this.cellHeight);
-    let cellPressed = this.field[cellY][cellX];
-    if (cellPressed.ball !== null) {
-      if (this.from) {
-        this.from.handleSelect(false, this);
+    if (!this.blockClick) {
+      this.operateGameOver();
+      let cellX = Math.floor(x / this.cellWidth);
+      let cellY = Math.floor((y - this.hudHeight) / this.cellHeight);
+      if (this.checkForBlockedCell(cellX,cellY)) {
+        return;
       }
-      this.from = cellPressed;
-      cellPressed.handleSelect(true, this);
-    } else {
-      if (this.from) {
-        this.from.handleSelect(false, this);
-        cellPressed.setBall(this.from.ball);
-        cellPressed.ball.hoover(this.from.x, this.from.y);
-        this.from.ball = null;
-        this.from = null;
-        this.prepareNextMove(cellX, cellY, cellPressed);
+
+      let cellPressed = this.field[cellY][cellX];
+      if (cellPressed.ball !== null) {
+        if (this.from) {
+          this.from.handleSelect(false, this);
+        }
+        this.from = cellPressed;
+        cellPressed.handleSelect(true, this);
+      } else {
+        if (this.from) {
+          this.from.handleSelect(false, this);
+          cellPressed.setBall(this.from.ball);
+          cellPressed.ball.hoover(this.from.x, this.from.y);
+          this.from.ball = null;
+          this.from = null;
+          this.prepareNextMove(cellX, cellY, cellPressed);
+        }
       }
     }
+  }
 
-    this.draw();
+  setBlock () {
+    this.blockClick = true;
+  }
+
+  removeBlock () {
+    this.blockClick = false;
   }
 
   findEmptyCells() {
@@ -365,7 +396,9 @@ class Game {
     idx = Math.floor(Math.random() * emptyCells.length);
     let selectedCell = emptyCells[idx];
     selectedCell.ball = this.createBall(selectedCell.x, selectedCell.y);
-    selectedCell.ball.appear(this.delay);
+    selectedCell.ball.appear(this.delay, () => {
+      this.removeBlockedCell(selectedCell);
+    });
     this.delay = this.delay + 100;
     return selectedCell;
   }
@@ -388,8 +421,9 @@ class Game {
 
   expandAnimation () {
     let scaleFactor = this.fieldWidth/(this.fieldWidth+2);
+    this.setBlock();
     let animation = new TWEEN.Tween(this).to({scaleX:scaleFactor, scaleY:scaleFactor},1000)
-      .easing(TWEEN.Easing.Back.In).onComplete(() => {this.expandField()}).start();
+      .easing(TWEEN.Easing.Back.In).onComplete(() => {this.expandField(); this.removeBlock()}).start();
   }
 
   expandField() {
@@ -421,9 +455,11 @@ class Game {
 
   contractAnimation () {
     let scaleFactor = this.fieldWidth/(this.fieldWidth+2);
+    this.setBlock();
     this.scaleX = scaleFactor;
     this.scaleY = scaleFactor;
-    let animation = new TWEEN.Tween(this).to({scaleX:1, scaleY:1}, 1000).easing(TWEEN.Easing.Back.Out).start();
+    let animation = new TWEEN.Tween(this).to({scaleX:1, scaleY:1}, 1000).easing(TWEEN.Easing.Back.Out)
+                    .onComplete(() => {this.removeBlock()}).start();
   }
 
   contractOnLvlUp () {
@@ -492,7 +528,6 @@ class Game {
   vanishCallBack(cell, isLast) {
     cell.ball = null;
     cell.handleSelect(false, this);
-    this.from = null;
     if (isLast) {
       this.levelUpIfNeeded();
     }
@@ -506,16 +541,17 @@ class Game {
     let delay = 0;
     for (let index in state) {
       let cell = state[index];
+      this.addBlockedCell(cell);
       this.changeScore(this.multiplier);
-
       cell.ball.vanish(() => {
+        let isLast = parseInt(index) === state.length-1;
+        this.removeBlockedCell(cell);
         if (onComplete) {
           cell.ball = null;
           cell.handleSelect(false, this);
-          this.from = null;
-          onComplete(cell, parseInt(index) === state.length - 1)
+          onComplete(cell, isLast)
         } else {
-          this.vanishCallBack(cell, parseInt(index) === state.length - 1)
+          this.vanishCallBack(cell, isLast)
         }
       }, delay);
       delay += 100;
@@ -528,6 +564,7 @@ class Game {
       let element = this.initRandomCell(this.findEmptyCells());
       if (element !== null) {
         state.push(element);
+        this.addBlockedCell(element);
       }
     }
     let empty = this.findEmptyCells();
@@ -716,9 +753,9 @@ class Ball {
 
   }
 
-  appear (delay= 0) {
+  appear (delay= 0, callback) {
     let animation = new TWEEN.Tween(this).to({scaleX:1, scaleY:1}, 400)
-                                          .easing(TWEEN.Easing.Quadratic.In).delay(delay);
+                                          .easing(TWEEN.Easing.Quadratic.In).onComplete(callback).delay(delay);
     animation.start();
   }
 
