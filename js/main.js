@@ -774,8 +774,9 @@ class Game {
 
   drawGameOver () {
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    let fontHeight = this.gameHeight*0.098;
     this.ctx.fillRect(0, 0, this.width, this.gameHeight);
-    this.ctx.font = 'bold 84px MainFont';
+    this.ctx.font = `bold ${fontHeight}px MainFont`;
     this.ctx.fillStyle = 'rgb(180,0,46)';
     this.ctx.strokeStyle = 'rgb(255, 255, 255)';
     this.ctx.strokeWidth = 3;
