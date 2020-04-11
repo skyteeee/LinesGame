@@ -197,8 +197,8 @@ class Game {
   initGame() {
     this.ballsPerTime = 3;
     this.inARowToVanish = 5;
-    this.fieldHeight = 10;
-    this.fieldWidth = 10;
+    this.fieldHeight = 8;
+    this.fieldWidth = 8;
     this.score = 0;
     this.earnedScore = 0;
     this.multiplier = 1;
