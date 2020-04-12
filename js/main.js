@@ -552,33 +552,35 @@ class Game {
   }
 
   contractField () {
-    this.scaleY = 1;
-    this.scaleX = 1;
-    this.oldField = this.field;
-    this.fieldHeight -= 2;
-    this.fieldWidth -= 2;
-    this.field = [];
-    this.cellHeight = this.height / this.fieldHeight;
-    this.cellWidth = this.width / this.fieldWidth;
-    this.cellHeight2 = this.cellHeight / 2;
-    this.cellWidth2 = this.cellWidth / 2;
-    this.initField();
-    for (let idx = 1; idx < this.oldField.length-1; idx ++) {
-      let row = this.oldField[idx];
-      for (let cellIdx = 1; cellIdx < row.length-1; cellIdx++) {
-        let cell = row[cellIdx];
-        cell.x--;
-        cell.y--;
-        let x = cell.x;
-        let y = cell.y;
-        if (cell.ball) {
-          cell.ball.cellHeight = this.cellHeight;
-          cell.ball.cellWidth = this.cellWidth;
-          this.field[y][x].setBall(cell.ball);
+    if (this.fieldWidth > 6) {
+      this.scaleY = 1;
+      this.scaleX = 1;
+      this.oldField = this.field;
+      this.fieldHeight -= 2;
+      this.fieldWidth -= 2;
+      this.field = [];
+      this.cellHeight = this.height / this.fieldHeight;
+      this.cellWidth = this.width / this.fieldWidth;
+      this.cellHeight2 = this.cellHeight / 2;
+      this.cellWidth2 = this.cellWidth / 2;
+      this.initField();
+      for (let idx = 1; idx < this.oldField.length - 1; idx++) {
+        let row = this.oldField[idx];
+        for (let cellIdx = 1; cellIdx < row.length - 1; cellIdx++) {
+          let cell = row[cellIdx];
+          cell.x--;
+          cell.y--;
+          let x = cell.x;
+          let y = cell.y;
+          if (cell.ball) {
+            cell.ball.cellHeight = this.cellHeight;
+            cell.ball.cellWidth = this.cellWidth;
+            this.field[y][x].setBall(cell.ball);
+          }
         }
       }
+      this.contractAnimation();
     }
-    this.contractAnimation();
   }
 
   vanishCallBack(cell, isLast) {
@@ -1049,30 +1051,53 @@ class DoubleBall extends Ball{
 class ExpansionBall extends RegularBall {
     drawBall(game) {
       super.drawBall(game);
-      game.ctx.fillStyle = 'white';
+      let radius = Math.floor(this.cellWidth*0.3125);
       game.ctx.strokeStyle = 'black';
-      game.ctx.strokeWidth = 1;
-      game.ctx.font = `bold ${this.cellHeight*0.2}px MainFont`;
-      game.ctx.textAlign = 'center';
-      game.ctx.textBaseline = 'top';
+      game.ctx.strokeWidth = 5;
 
-      game.ctx.fillText('E', 0, -this.cellHeight*0.065);
-      game.ctx.strokeText('E', 0, -this.cellHeight*0.065);
+      game.ctx.save();
+      game.ctx.rotate(Math.PI/180*(-45));
+      game.ctx.beginPath();
+      game.ctx.moveTo(0,this.cellHeight*0.025);
+      game.ctx.lineTo(0, Math.floor(radius-this.cellHeight*0.075));
+      game.ctx.moveTo(0,this.cellHeight*0.025);
+      game.ctx.lineTo(this.cellWidth*0.05, this.cellHeight*0.1);
+      game.ctx.moveTo(0,this.cellHeight*0.025);
+      game.ctx.lineTo(-this.cellWidth*0.05, this.cellHeight*0.1);
+
+      game.ctx.moveTo(0, -this.cellHeight*0.025);
+      game.ctx.lineTo(0, -Math.floor(radius-this.cellHeight*0.075));
+      game.ctx.moveTo(0, -this.cellHeight*0.025);
+      game.ctx.lineTo(this.cellWidth*0.05, -this.cellHeight*0.1);
+      game.ctx.moveTo(0, -this.cellHeight*0.025);
+      game.ctx.lineTo(-this.cellWidth*0.05, -this.cellHeight*0.1);
+      game.ctx.stroke();
+      game.ctx.restore();
     }
 }
 
 class ContractionBall extends RegularBall {
   drawBall(game) {
     super.drawBall(game);
-    game.ctx.fillStyle = 'black';
-    game.ctx.strokeStyle = 'white';
-    game.ctx.strokeWidth = 1;
-    game.ctx.font = `bold ${this.cellHeight*0.2}px MainFont`;
-    game.ctx.textAlign = 'center';
-    game.ctx.textBaseline = 'top';
+    let radius = Math.floor(this.cellWidth*0.3125);
+    game.ctx.strokeStyle = 'black';
+    game.ctx.save();
+    game.ctx.strokeWidth = 5;
+    game.ctx.rotate(Math.PI/180*45);
+    game.ctx.beginPath();
+    game.ctx.moveTo(0,this.cellHeight*0.025);
+    game.ctx.lineTo(0, Math.floor(radius-this.cellHeight*0.075));
+    game.ctx.lineTo(this.cellWidth*0.05, this.cellHeight*0.1);
+    game.ctx.moveTo(0, Math.floor(radius-this.cellHeight*0.075));
+    game.ctx.lineTo(-this.cellWidth*0.05, this.cellHeight*0.1);
 
-    game.ctx.fillText('C', 0, -this.cellHeight*0.065);
-    game.ctx.strokeText('C', 0, -this.cellHeight*0.065);
+    game.ctx.moveTo(0, -this.cellHeight*0.025);
+    game.ctx.lineTo(0, -Math.floor(radius-this.cellHeight*0.075));
+    game.ctx.lineTo(this.cellWidth*0.05, -this.cellHeight*0.1);
+    game.ctx.moveTo(0, -Math.floor(radius-this.cellHeight*0.075));
+    game.ctx.lineTo(-this.cellWidth*0.05, -this.cellHeight*0.1);
+    game.ctx.stroke();
+    game.ctx.restore();
   }
 }
 
