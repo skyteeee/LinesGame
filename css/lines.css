@@ -12,7 +12,13 @@
   src: url('../fonts/mainfont.ttf')  format('truetype');
 }
 
+@font-face {
+  font-family: 'SmallPixel';
+  src: url("../fonts/smallFont.ttf") format('truetype');
+}
+
 .center {
+  font-family: 'SmallPixel', Fallback, sans-serif;
   width: 60%;
   max-width: 80vh;
 }

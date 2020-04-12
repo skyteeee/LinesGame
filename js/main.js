@@ -154,7 +154,8 @@ class Game {
       new Color(0, 0, 255),
       new Color(125, 0, 125)
     ];
-    this.possibleBallTypes = [superBomb, regular, regular, regular, doubleBall, regular, regular, regular, regular, regular, regular];
+    this.possibleBallTypes = [regular, regular, regular, doubleBall, regular, regular, regular, regular, regular, regular];
+    this.forcedBallTypes = [];
   }
 
   resize () {
@@ -407,7 +408,13 @@ class Game {
         if (this.from) {
           this.from.handleSelect(false, this);
           cellPressed.setBall(this.from.ball);
-          cellPressed.ball.hoover(this.from.x, this.from.y);
+          let from = this.from;
+          this.addBlockedCell(from);
+          this.addBlockedCell(cellPressed);
+          cellPressed.ball.hoover(this.from.x, this.from.y, () => {
+            this.removeBlockedCell(from);
+            this.removeBlockedCell(cellPressed);
+          });
           this.from.ball = null;
           this.from = null;
           this.prepareNextMove(cellX, cellY, cellPressed);
@@ -527,6 +534,7 @@ class Game {
 
   contractRemoveBalls () {
     let balls = [];
+    this.setBlock();
     for (let xidx = 0; xidx < this.fieldWidth; xidx++) {
       let row1 = this.field[0];
       let row2 = this.field[this.fieldHeight - 1];
@@ -549,7 +557,7 @@ class Game {
         balls.push(cell2);
       }
     }
-    this.removeBalls(balls, (_cell,isLast) => {if (isLast){this.contractField()}});
+    this.removeBalls(balls, (_cell,isLast) => {if (isLast){this.contractField(); this.removeBlock()}});
   }
 
   contractField () {
@@ -669,10 +677,28 @@ class Game {
       return false;
     }
      else {
+       if (empty.length <= 0.33*this.fieldHeight*this.fieldWidth && !this.checkForSuperBombs()) {
+         this.forcedBallTypes.push(superBomb);
+       }
       this.checkBalls(state);
       this.delay = 0;
       return true;
     }
+  }
+
+  /**
+   * check field for super bomb, returns true if found
+   * @returns {boolean}
+   */
+  checkForSuperBombs () {
+    for (let row of this.field) {
+      for (let cell of row) {
+        if (cell.ball && cell.ball.getType() === superBomb) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   removeBallType (type) {
@@ -681,7 +707,12 @@ class Game {
   }
 
   createBall(x, y) {
-    let ballType = this.possibleBallTypes [Math.floor(Math.random() * this.possibleBallTypes.length)];
+    let ballType;
+    if (this.forcedBallTypes.length === 0) {
+      ballType = this.possibleBallTypes [Math.floor(Math.random() * this.possibleBallTypes.length)];
+    } else {
+      ballType = this.forcedBallTypes.shift();
+    }
     switch (ballType) {
       case regular: {
         let colorIdx = this.getRandomColorIdx();
@@ -729,19 +760,21 @@ class Game {
     let inARow = [];
 
     let colorSet = colors ? colors : ball.colors;
+    let prevColorSet = colorSet;
 
     while (y+deltaY < this.fieldHeight && x+deltaX < this.fieldWidth
           && y+deltaY >= 0 && x+deltaX >= 0) {
 
       let element = this.field[y + deltaY][x + deltaX];
       if (element.ball !== null) {
+        prevColorSet = colorSet;
         colorSet = intersection(colorSet, element.ball.colors);
         if (colorSet.size !== 0) {
           inARow.push(element);
           deltaX += originalDX;
           deltaY += originalDY;
         } else {
-          break;
+          return  {inARow: inARow, colorSet: prevColorSet};
         }
       } else {
         break;
@@ -886,7 +919,7 @@ class Ball {
       .delay(delay).onComplete(onComplete).start();
   }
 
-  hoover (oldx, oldy) {
+  hoover (oldx, oldy, onComplete) {
     let oldP = xy2screen(oldx, oldy, this);
     let p = xy2screen(this.x, this.y, this);
     let mx = p.pX-oldP.pX;
@@ -900,6 +933,7 @@ class Ball {
       .chain(new TWEEN.Tween(this).to({scaleX:1, scaleY:1}, 250)
         .easing(TWEEN.Easing.Quadratic.In)).start();
     let animation = new TWEEN.Tween(this).to({px:0, py:0}, 500).easing(TWEEN.Easing.Quadratic.InOut)
+      .onComplete(onComplete)
       .start();
 
   }
@@ -1168,7 +1202,7 @@ class SuperBomb extends RainbowBall {
     game.ctx.fillStyle = ballGradient;
     game.ctx.fillRect(x, y, this.cellWidth, this.cellHeight);
 
-    game.ctx.font = `bold ${radius*0.5}px MainFont`;
+    game.ctx.font = `bold ${radius*0.5}px SmallPixel`;
     game.ctx.fillStyle = 'red';
     game.ctx.textAlign = 'center';
     game.ctx.textBaseline = 'middle';
