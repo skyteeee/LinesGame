@@ -125,6 +125,7 @@ const doubleBall = 'double';
 const regular = 'regular';
 const rainbow = 'rainbow';
 const contractionBall = 'contraction';
+const superBomb = 'superBomb';
 
 class Game {
   constructor() {
@@ -153,7 +154,7 @@ class Game {
       new Color(0, 0, 255),
       new Color(125, 0, 125)
     ];
-    this.possibleBallTypes = [regular, regular, regular, doubleBall, regular, regular, regular, regular, regular, regular];
+    this.possibleBallTypes = [superBomb, regular, regular, regular, doubleBall, regular, regular, regular, regular, regular, regular];
   }
 
   resize () {
@@ -324,39 +325,39 @@ class Game {
       let selected = this.field[y][x];
 
       let state1 = this.check(x, y, 1, 0, ball);
-      let state4 = this.check(x, y, -1, 0, ball);
-      state1.push(selected);
-      state1.push(...state4);
-      if (this.isLineComplete(state1)) {
+      let state4 = this.check(x, y, -1, 0, ball, state1.colorSet);
+      state1.inARow.push(selected);
+      state1.inARow.push(...state4.inARow);
+      if (this.isLineComplete(state1.inARow)) {
         state = true;
-        ballsToRemove.push(...state1);
+        ballsToRemove.push(...state1.inARow);
       }
 
       let state2 = this.check(x, y, 0, 1, ball);
-      let state5 = this.check(x, y, 0, -1, ball);
-      state2.push(selected);
-      state2.push(...state5);
-      if (this.isLineComplete(state2)) {
+      let state5 = this.check(x, y, 0, -1, ball, state2.colorSet);
+      state2.inARow.push(selected);
+      state2.inARow.push(...state5.inARow);
+      if (this.isLineComplete(state2.inARow)) {
         state = true;
-        ballsToRemove.push(...state2);
+        ballsToRemove.push(...state2.inARow);
       }
 
       let state3 = this.check(x, y, 1, 1, ball);
-      let state6 = this.check(x, y, -1, -1, ball);
-      state3.push(selected);
-      state3.push(...state6);
-      if (this.isLineComplete(state3)) {
+      let state6 = this.check(x, y, -1, -1, ball, state3.colorSet);
+      state3.inARow.push(selected);
+      state3.inARow.push(...state6.inARow);
+      if (this.isLineComplete(state3.inARow)) {
         state = true;
-        ballsToRemove.push(...state3);
+        ballsToRemove.push(...state3.inARow);
       }
 
       let state7 = this.check(x, y, 1, -1, ball);
-      let state8 = this.check(x, y, -1, 1, ball);
-      state7.push(selected);
-      state7.push(...state8);
-      if (this.isLineComplete(state7)) {
+      let state8 = this.check(x, y, -1, 1, ball, state7.colorSet);
+      state7.inARow.push(selected);
+      state7.inARow.push(...state8.inARow);
+      if (this.isLineComplete(state7.inARow)) {
         state = true;
-        ballsToRemove.push(...state7);
+        ballsToRemove.push(...state7.inARow);
       }
 
       if (state) {
@@ -583,6 +584,28 @@ class Game {
     }
   }
 
+  superBombRemoveBalls () {
+    this.setBlock();
+    this.earnedScore = -Math.floor(this.score*0.25);
+    this.scoreAnimation();
+    let balls = [];
+    for (let rowIdx = 0; rowIdx < this.field.length; rowIdx++) {
+      let row = this.field[rowIdx];
+
+      for (let cell of row) {
+        cell.handleSelect(false, this);
+        if (cell.ball) {
+          balls.push(cell);
+        }
+      }
+    }
+    this.removeBalls(balls, (cell, isLast) => {
+      if (isLast) {
+        this.generateBalls();
+      }
+    });
+  }
+
   vanishCallBack(cell, isLast) {
     if (cell.ball instanceof ExpansionBall) {
       this.expandAnimation();
@@ -590,10 +613,14 @@ class Game {
     if (cell.ball instanceof ContractionBall) {
       this.contractRemoveBalls()
     }
+    if (cell.ball instanceof SuperBomb) {
+      this.superBombRemoveBalls();
+    }
     cell.ball = null;
     cell.handleSelect(false, this);
     if (isLast) {
       this.levelUpIfNeeded();
+      this.removeBlock();
     }
 
   }
@@ -602,17 +629,17 @@ class Game {
     return array.length>=this.inARowToVanish;
   }
 
-  removeBalls (array, onComplete) {
+  removeBalls (cellArray, onComplete) {
     let delay = 0;
-    if (array.length >= this.inARowToVanish+1) {
+    if (cellArray.length >= this.inARowToVanish+1) {
       this.possibleBallTypes.push(rainbow);
     }
-    for (let index in array) {
-      let cell = array[index];
+    for (let index in cellArray) {
+      let cell = cellArray[index];
       this.addBlockedCell(cell);
       this.changeScore(this.multiplier, cell.ball);
       cell.ball.vanish(() => {
-        let isLast = parseInt(index) === array.length-1;
+        let isLast = parseInt(index) === cellArray.length-1;
         this.removeBlockedCell(cell);
         if (onComplete) {
           cell.ball = null;
@@ -648,51 +675,60 @@ class Game {
     }
   }
 
+  removeBallType (type) {
+    let index = this.possibleBallTypes.findIndex((item) => {return item === type});
+    this.possibleBallTypes.splice(index, 1);
+  }
+
   createBall(x, y) {
     let ballType = this.possibleBallTypes [Math.floor(Math.random() * this.possibleBallTypes.length)];
-    console.log(ballType);
     switch (ballType) {
       case regular: {
-        let colorIdx = Math.floor(Math.random() * (this.newColorIdx + 1));
+        let colorIdx = this.getRandomColorIdx();
         let color = this.possibleBallColors[colorIdx];
         return new RegularBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
       }
       case rainbow: {
-        let index = this.possibleBallTypes.findIndex((item) => {return item === rainbow});
-        this.possibleBallTypes.splice(index, 1);
+        this.removeBallType(rainbow);
         return new RainbowBall(x, y, this.cellHeight, this.cellWidth, this.possibleBallColors);
       }
       case doubleBall: {
-        let colorIdx1 = Math.floor(Math.random() * (this.newColorIdx + 1));
-        let colorIdx2 = Math.floor(Math.random() * (this.newColorIdx + 1));
+        let colorIdx1 = this.getRandomColorIdx();
+        let colorIdx2 = this.getRandomColorIdx();
         while (colorIdx1 === colorIdx2) {
-          colorIdx2 = Math.floor(Math.random() * (this.newColorIdx + 1));
+          colorIdx2 = this.getRandomColorIdx();
         }
-        console.log('Double ball color indexes are ', colorIdx1, ', ', colorIdx2);
         return new DoubleBall(x, y, this.cellWidth, this.cellHeight, colorIdx1, colorIdx2, this.possibleBallColors);
       }
       case expansionBall: {
-        let index = this.possibleBallTypes.findIndex((item) => {return item === expansionBall});
-        this.possibleBallTypes.splice(index, 1);
-        let colorIdx = Math.floor(Math.random() * (this.newColorIdx + 1));
+        this.removeBallType(expansionBall);
+        let colorIdx = this.getRandomColorIdx();
         let color = this.possibleBallColors[colorIdx];
         return new ExpansionBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
       }
       case contractionBall: {
-        let index = this.possibleBallTypes.findIndex((item) => {return item === contractionBall});
-        this.possibleBallTypes.splice(index, 1);
-        let colorIdx = Math.floor(Math.random() * (this.newColorIdx + 1));
+        this.removeBallType(contractionBall);
+        let colorIdx = this.getRandomColorIdx();
         let color = this.possibleBallColors[colorIdx];
         return new ContractionBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
+      }
+      case superBomb: {
+        this.removeBallType(superBomb);
+        return new SuperBomb(x, y, this.cellWidth, this.cellHeight, this.possibleBallColors);
       }
     }
   }
 
-  check(x, y, deltaY, deltaX, ball) {
+  getRandomColorIdx () {
+    return Math.floor(Math.random() * (this.newColorIdx + 1));
+  }
+
+  check(x, y, deltaY, deltaX, ball, colors) {
     let originalDY = deltaY;
     let originalDX = deltaX;
     let inARow = [];
-    let colorSet = ball.colors;
+
+    let colorSet = colors ? colors : ball.colors;
 
     while (y+deltaY < this.fieldHeight && x+deltaX < this.fieldWidth
           && y+deltaY >= 0 && x+deltaX >= 0) {
@@ -711,7 +747,7 @@ class Game {
         break;
       }
     }
-    return inARow;
+    return {inARow:inARow, colorSet:colorSet};
   }
 
 
@@ -893,8 +929,10 @@ class Ball {
   }
 
   deselect () {
-    this.selectedTween.stop();
-    this.selectedTween = null;
+    if (this.selectedTween) {
+      this.selectedTween.stop();
+      this.selectedTween = null;
+    }
     this.py = 0;
     this.scaleX = 1;
     this.scaleY = 1;
@@ -1009,6 +1047,10 @@ class DoubleBall extends Ball{
     return 10;
   }
 
+  getType() {
+    return doubleBall;
+  }
+
   drawBall(game) {
     super.drawBall(game);
     let x = -game.cellWidth2;
@@ -1036,7 +1078,7 @@ class DoubleBall extends Ball{
 
     game.ctx.fillStyle = rainbowGradient;
     game.ctx.beginPath();
-    game.ctx.arc(0, 0, radius, 0, Math.PI*2);
+    game.ctx.arc(0.5, 0.5, radius, 0, Math.PI*2);
     game.ctx.fill();
     game.ctx.strokeStyle = 'rgba(68,68,68,0.5)';
     game.ctx.strokeWidth = 1;
@@ -1053,9 +1095,8 @@ class ExpansionBall extends RegularBall {
       super.drawBall(game);
       let radius = Math.floor(this.cellWidth*0.3125);
       game.ctx.strokeStyle = 'black';
-      game.ctx.strokeWidth = 5;
-
       game.ctx.save();
+      game.ctx.lineWidth = 3;
       game.ctx.rotate(Math.PI/180*(-45));
       game.ctx.beginPath();
       game.ctx.moveTo(0,this.cellHeight*0.025);
@@ -1074,6 +1115,10 @@ class ExpansionBall extends RegularBall {
       game.ctx.stroke();
       game.ctx.restore();
     }
+
+    getType() {
+      return expansionBall;
+    }
 }
 
 class ContractionBall extends RegularBall {
@@ -1082,7 +1127,7 @@ class ContractionBall extends RegularBall {
     let radius = Math.floor(this.cellWidth*0.3125);
     game.ctx.strokeStyle = 'black';
     game.ctx.save();
-    game.ctx.strokeWidth = 5;
+    game.ctx.lineWidth = 3;
     game.ctx.rotate(Math.PI/180*45);
     game.ctx.beginPath();
     game.ctx.moveTo(0,this.cellHeight*0.025);
@@ -1099,6 +1144,44 @@ class ContractionBall extends RegularBall {
     game.ctx.stroke();
     game.ctx.restore();
   }
+  getType() {
+    return contractionBall;
+  }
+}
+
+class SuperBomb extends RainbowBall {
+  drawBall(game) {
+    let x = -game.cellWidth2;
+    let y = -game.cellHeight2;
+    let xy0 = Math.floor(this.cellHeight*0.15);
+    let radius = Math.floor(this.cellHeight*0.3125);
+    game.ctx.translate (this.px, this.py);
+    game.ctx.scale(this.scaleX, this.scaleY);
+
+    let ballGradient = game.ctx.createRadialGradient(-xy0, -xy0, 0, 0, 0, radius);
+
+    ballGradient.addColorStop(0, 'white');
+    ballGradient.addColorStop(0.7, 'black');
+    ballGradient.addColorStop(0.9, 'black');
+    ballGradient.addColorStop(1, 'transparent');
+
+    game.ctx.fillStyle = ballGradient;
+    game.ctx.fillRect(x, y, this.cellWidth, this.cellHeight);
+
+    game.ctx.font = `bold ${radius*0.5}px MainFont`;
+    game.ctx.fillStyle = 'red';
+    game.ctx.textAlign = 'center';
+    game.ctx.textBaseline = 'middle';
+    game.ctx.strokeStyle = 'white';
+    game.ctx.strokeWidth = 1;
+
+    game.ctx.fillText('-25%',0, 0);
+  }
+
+  getType() {
+    return superBomb;
+  }
+
 }
 
 let game = new Game();
