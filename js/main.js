@@ -110,6 +110,17 @@ class Color {
     this.alpha = a;
   }
 
+  lightenColor (percent = 0.2) {
+    let r = Math.min(this.red*(1+percent), 255);
+    let g = Math.min(this.green*(1+percent), 255);
+    let b = Math.min(this.blue*(1+percent), 255);
+    return `rgba(${r},${g},${b},${this.alpha})`
+  }
+
+  darkenColor (percent = 0.8) {
+    return `rgba(${this.red*percent},${this.green*percent},${this.blue*percent},${this.alpha})`
+  }
+
   clone () {
     return new Color(this.red, this.green, this.blue, this.alpha);
   }
@@ -126,6 +137,7 @@ const regular = 'regular';
 const rainbow = 'rainbow';
 const contractionBall = 'contraction';
 const superBomb = 'superBomb';
+const colorWave = 'colorWave';
 
 class Game {
   constructor() {
@@ -145,6 +157,7 @@ class Game {
     this.blockedCells = [];
     this.drawOverAll = [];
     this.blockClick = false;
+    this.colorWaveTimer = null;
     this.possibleBallColors = [
       new Color(218, 0, 25),
       new Color(255, 91, 0),
@@ -154,8 +167,7 @@ class Game {
       new Color(0, 0, 255),
       new Color(125, 0, 125)
     ];
-    this.possibleBallTypes = [regular, regular, regular, doubleBall, regular, regular, regular, regular, regular, regular];
-    this.forcedBallTypes = [];
+
   }
 
   resize () {
@@ -210,6 +222,11 @@ class Game {
     this.scoreToLevelUp = 100;
     this.levelToAddColor = 3;
     this.isGameOver = false;
+    this.isColorWaveModeOn = false;
+    this.possibleBallTypes = [regular, regular, regular, doubleBall, regular, regular, regular, regular, regular, regular];
+    this.forcedBallTypes = [colorWave, colorWave];
+    this.ballsRemoved = 0;
+    this.colorWaveIdx = null;
 
     if (this.height) {
       this.cellHeight = this.height / this.fieldHeight;
@@ -390,35 +407,56 @@ class Game {
 
   onClick(x, y) {
     if (!this.blockClick) {
-      this.operateGameOver();
-      let cellX = Math.floor(x / this.cellWidth);
-      let cellY = Math.floor((y - this.hudHeight) / this.cellHeight);
-      if (this.checkForBlockedCell(cellX,cellY)) {
-        return;
-      }
-
-      let cellPressed = this.field[cellY][cellX];
-      if (cellPressed.ball !== null) {
-        if (this.from) {
-          this.from.handleSelect(false, this);
-        }
-        this.from = cellPressed;
-        cellPressed.handleSelect(true, this);
+      if (!this.isColorWaveModeOn) {
+        this.regularClick(x, y);
       } else {
-        if (this.from) {
-          this.from.handleSelect(false, this);
-          cellPressed.setBall(this.from.ball);
-          let from = this.from;
-          this.addBlockedCell(from);
-          this.addBlockedCell(cellPressed);
-          cellPressed.ball.hoover(this.from.x, this.from.y, () => {
-            this.removeBlockedCell(from);
-            this.removeBlockedCell(cellPressed);
-          });
-          this.from.ball = null;
-          this.from = null;
-          this.prepareNextMove(cellX, cellY, cellPressed);
-        }
+        this.colorWaveClick(x, y);
+      }
+    }
+  }
+
+  colorWaveClick(x, y) {
+    let cellX = Math.floor(x / this.cellWidth);
+    let cellY = Math.floor((y - this.hudHeight) / this.cellHeight);
+    if (this.checkForBlockedCell(cellX, cellY)){
+      return;
+    }
+
+    let cell = this.field[cellY][cellX];
+    if (cell.ball && cell.ball.getType() === colorWave && cell.ball.colorIdx === this.colorWaveIdx) {
+      this.removeBalls([cell]);
+    }
+  }
+
+  regularClick(x, y) {
+    this.operateGameOver();
+    let cellX = Math.floor(x / this.cellWidth);
+    let cellY = Math.floor((y - this.hudHeight) / this.cellHeight);
+    if (this.checkForBlockedCell(cellX, cellY)) {
+      return;
+    }
+
+    let cellPressed = this.field[cellY][cellX];
+    if (cellPressed.ball !== null) {
+      if (this.from) {
+        this.from.handleSelect(false, this);
+      }
+      this.from = cellPressed;
+      cellPressed.handleSelect(true, this);
+    } else {
+      if (this.from) {
+        this.from.handleSelect(false, this);
+        cellPressed.setBall(this.from.ball);
+        let from = this.from;
+        this.addBlockedCell(from);
+        this.addBlockedCell(cellPressed);
+        cellPressed.ball.hoover(this.from.x, this.from.y, () => {
+          this.removeBlockedCell(from);
+          this.removeBlockedCell(cellPressed);
+        });
+        this.from.ball = null;
+        this.from = null;
+        this.prepareNextMove(cellX, cellY, cellPressed);
       }
     }
   }
@@ -532,6 +570,65 @@ class Game {
     }
   }
 
+  colorWaveMode(colorIdx) {
+    if (!this.isColorWaveModeOn) {
+      let color = this.possibleBallColors[colorIdx];
+      this.colorWaveIdx = colorIdx;
+      let counter = 0;
+      for (let row of this.field) {
+        for (let cell of row) {
+          if (cell.ball && cell.ball.colorIdx === colorIdx && !cell.ball.isVanishing) {
+            cell.setBall(new ColorWave(cell.x, cell.y, this.cellWidth, this.cellHeight, colorIdx, color));
+            cell.ball.appear(counter*50, () => {cell.ball.dribble()});
+            counter++;
+          }
+        }
+      }
+      if (counter === 0) {
+        return;
+      }
+      this.colorWaveTimer = new ColorWaveTimer(5000);
+      this.addOverallObject(this.colorWaveTimer);
+      this.colorWaveTimer.animate(() => {
+        this.turnOffColorWaveMode(colorIdx);
+      });
+      this.isColorWaveModeOn = true;
+    } else {
+      if (!this.checkForColorWave()) {
+        this.turnOffColorWaveMode(colorIdx);
+      }
+    }
+  }
+
+  checkForColorWave() {
+    for (let row of this.field) {
+      for (let cell of row) {
+        if (cell.ball && cell.ball.getType() === colorWave &&
+          !cell.ball.isVanishing && cell.ball.colorIdx === this.colorWaveIdx) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  turnOffColorWaveMode (colorIdx) {
+    this.removeOverallObject(this.colorWaveTimer);
+    this.colorWaveTimer = null;
+    this.colorWaveIdx = null;
+    this.isColorWaveModeOn = false;
+    let color = this.possibleBallColors[colorIdx];
+    for (let row of this.field) {
+      for (let cell of row) {
+        if (cell.ball && cell.ball.getType() === colorWave &&
+          cell.ball.colorIdx === colorIdx && !cell.ball.isVanishing) {
+          cell.setBall(new RegularBall(cell.x, cell.y, colorIdx, color, this.cellWidth, this.cellHeight));
+          cell.ball.appear();
+        }
+      }
+    }
+  }
+
   contractRemoveBalls () {
     let balls = [];
     this.setBlock();
@@ -551,9 +648,11 @@ class Game {
       let cell1 = this.field[yidx][0];
       let cell2 = this.field[yidx][this.fieldWidth - 1];
       if (cell1.ball) {
+        cell1.ball.setDisabled(true);
         balls.push(cell1);
       }
       if (cell2.ball) {
+        cell2.ball.setDisabled(true);
         balls.push(cell2);
       }
     }
@@ -603,6 +702,7 @@ class Game {
       for (let cell of row) {
         cell.handleSelect(false, this);
         if (cell.ball) {
+          cell.ball.setDisabled(true);
           balls.push(cell);
         }
       }
@@ -615,14 +715,19 @@ class Game {
   }
 
   vanishCallBack(cell, isLast) {
-    if (cell.ball instanceof ExpansionBall) {
-      this.expandAnimation();
-    }
-    if (cell.ball instanceof ContractionBall) {
-      this.contractRemoveBalls()
-    }
-    if (cell.ball instanceof SuperBomb) {
-      this.superBombRemoveBalls();
+    if (!cell.ball.isDisabled) {
+      if (cell.ball instanceof ExpansionBall) {
+        this.expandAnimation();
+      }
+      if (cell.ball instanceof ContractionBall) {
+        this.contractRemoveBalls()
+      }
+      if (cell.ball instanceof SuperBomb) {
+        this.superBombRemoveBalls();
+      }
+      if (cell.ball instanceof ColorWave) {
+        this.colorWaveMode(cell.ball.colorIdx);
+      }
     }
     cell.ball = null;
     cell.handleSelect(false, this);
@@ -630,7 +735,6 @@ class Game {
       this.levelUpIfNeeded();
       this.removeBlock();
     }
-
   }
 
   isLineComplete (array) {
@@ -646,6 +750,7 @@ class Game {
       let cell = cellArray[index];
       this.addBlockedCell(cell);
       this.changeScore(this.multiplier, cell.ball);
+      this.incrementRemovedBalls();
       cell.ball.vanish(() => {
         let isLast = parseInt(index) === cellArray.length-1;
         this.removeBlockedCell(cell);
@@ -658,6 +763,13 @@ class Game {
         }
       }, delay);
       delay += 100;
+    }
+  }
+
+  incrementRemovedBalls() {
+    this.ballsRemoved ++;
+    if (this.ballsRemoved%29 === 0) {
+      this.forcedBallTypes.push(colorWave);
     }
   }
 
@@ -746,6 +858,12 @@ class Game {
       case superBomb: {
         this.removeBallType(superBomb);
         return new SuperBomb(x, y, this.cellWidth, this.cellHeight, this.possibleBallColors);
+      }
+      case colorWave: {
+        this.removeBallType(colorWave);
+        let colorIdx = this.getRandomColorIdx();
+        let color = this.possibleBallColors[colorIdx];
+        return new ColorWave(x, y, this.cellWidth, this.cellHeight, colorIdx, color);
       }
     }
   }
@@ -895,10 +1013,17 @@ class Ball {
     this.y = y;
     this.scaleX = 0;
     this.scaleY = 0;
+    this.angle = 0;
+    this.isVanishing = false;
+    this.isDisabled = false;
     this.colors = new Set();
     this.cellWidth = cellWidth;
     this.cellHeight = cellHeight;
     this.selectedTween = null;
+  }
+
+  setDisabled(state) {
+    this.isDisabled = state;
   }
 
   getScore () {
@@ -912,9 +1037,11 @@ class Ball {
   drawBall (game) {
     game.ctx.translate (this.px, this.py);
     game.ctx.scale(this.scaleX, this.scaleY);
+    game.ctx.rotate(this.angle);
   }
 
   vanish (onComplete,delay = 0) {
+    this.isVanishing = true;
     let rescale = new TWEEN.Tween(this).to({scaleX: 5, scaleY: 5}, 300).easing(TWEEN.Easing.Quadratic.In)
       .delay(delay).onComplete(onComplete).start();
   }
@@ -940,7 +1067,10 @@ class Ball {
 
   appear (delay= 0, callback) {
     let animation = new TWEEN.Tween(this).to({scaleX:1, scaleY:1}, 400)
-      .easing(TWEEN.Easing.Quadratic.In).onComplete(callback).delay(delay);
+      .easing(TWEEN.Easing.Quadratic.In).delay(delay);
+    if (callback) {
+      animation.onComplete(callback)
+    }
     animation.start();
   }
 
@@ -964,12 +1094,19 @@ class Ball {
 
   deselect () {
     if (this.selectedTween) {
-      this.selectedTween.stop();
+      if (Array.isArray(this.selectedTween)) {
+        for (let animation of this.selectedTween) {
+          animation.stop();
+        }
+      } else {
+        this.selectedTween.stop();
+      }
       this.selectedTween = null;
     }
     this.py = 0;
     this.scaleX = 1;
     this.scaleY = 1;
+    this.angle = 0;
   }
 }
 
@@ -978,6 +1115,7 @@ class RegularBall extends Ball {
     super(x,y,cellWidth, cellHeight);
     this.colors.add(colorIdx);
     this.color = color.clone();
+    this.colorIdx = colorIdx;
   }
 
   getScore() {
@@ -1216,6 +1354,130 @@ class SuperBomb extends RainbowBall {
     return superBomb;
   }
 
+}
+
+class ColorWave extends Ball {
+  constructor(x, y, cellWidth, cellHeight, colorIdx, color) {
+    super(x, y, cellWidth, cellHeight);
+    this.colors.add(colorIdx);
+    this.colorIdx = colorIdx;
+    this.color = color.clone();
+  }
+  getType() {
+    return colorWave;
+  }
+  getScore() {
+    return 100;
+  }
+
+  drawBall(game) {
+    super.drawBall(game);
+    let radius = Math.floor(this.cellHeight*0.3125);
+    let halfSide = radius/2.5;
+
+    game.ctx.beginPath();
+    game.ctx.moveTo(radius, halfSide);
+    game.ctx.lineTo(radius, -halfSide);
+    game.ctx.lineTo(halfSide, -radius);
+    game.ctx.lineTo(-halfSide, -radius);
+    game.ctx.lineTo(-radius, -halfSide);
+    game.ctx.lineTo(-radius, halfSide);
+    game.ctx.lineTo(-halfSide, radius);
+    game.ctx.lineTo(halfSide, radius);
+    game.ctx.closePath();
+
+    let color = this.color.iRequestNormalColor();
+    let darker = this.color.darkenColor(0.8);
+    let lighter = this.color.lightenColor(0.5);
+    let outerGradient = game.ctx.createLinearGradient(-radius, -radius, radius, radius);
+    outerGradient.addColorStop(0, lighter);
+    outerGradient.addColorStop(1, darker);
+
+    game.ctx.fillStyle = outerGradient;
+    game.ctx.fill();
+    game.ctx.strokeStyle = 'rgba(68,68,68,0.5)';
+    game.ctx.strokeWidth = 1;
+    game.ctx.stroke();
+
+    radius *= 0.7;
+    halfSide *= 0.7;
+
+    game.ctx.beginPath();
+    game.ctx.moveTo(radius, halfSide);
+    game.ctx.lineTo(radius, -halfSide);
+    game.ctx.lineTo(halfSide, -radius);
+    game.ctx.lineTo(-halfSide, -radius);
+    game.ctx.lineTo(-radius, -halfSide);
+    game.ctx.lineTo(-radius, halfSide);
+    game.ctx.lineTo(-halfSide, radius);
+    game.ctx.lineTo(halfSide, radius);
+    game.ctx.closePath();
+
+    let innerGradient = game.ctx.createLinearGradient(radius, radius, -radius, -radius);
+    innerGradient.addColorStop(0, lighter);
+    innerGradient.addColorStop(1, darker);
+
+    game.ctx.fillStyle = innerGradient;
+    game.ctx.fill();
+  }
+
+  selected(game) {
+    let rotation = new TWEEN.Tween(this).to({angle:Math.PI*2}, 3000).repeat(Infinity).start();
+    let scaling = new TWEEN.Tween(this).to({scaleY:0.9, scaleX:0.9}, 500).repeat(Infinity)
+      .yoyo(true).easing(TWEEN.Easing.Elastic.In).start();
+    this.selectedTween = [rotation, scaling];
+  }
+
+  vanish(onComplete, delay = 0) {
+    this.isVanishing = true;
+    if (this.dribbleTween) {
+      this.dribbleTween.stop();
+      this.dribbleTween = null;
+    }
+    let rescale = new TWEEN.Tween(this).to({scaleX:0, scaleY:0}, 300).easing(TWEEN.Easing.Quadratic.In)
+      .delay(delay).start();
+    let rotation = new TWEEN.Tween(this).to({angle:Math.PI*2}, 300).easing(TWEEN.Easing.Quadratic.In)
+      .delay(delay).onComplete(onComplete).start();
+  }
+
+  dribble () {
+    let angle = Math.PI/180*15;
+    this.angle = -angle;
+
+    let animation = new TWEEN.Tween(this).to({angle:angle}, 200);
+
+    let goBack = new TWEEN.Tween(this).to({angle:-angle}, 200);
+
+    animation.chain(goBack);
+    goBack.chain(animation);
+    animation.start();
+
+    this.dribbleTween = animation;
+  }
+
+}
+
+class ColorWaveTimer {
+  constructor(timeMS) {
+    this.timeLeft = timeMS;
+    this. animationTime = timeMS;
+  }
+  draw(game) {
+    let fontSize = game.hudHeight*0.56;
+    game.ctx.save();
+    game.ctx.clearRect(0, 0, game.width, game.hudHeight);
+    game.ctx.translate(game.width*0.5, game.hudHeight*0.25);
+    game.ctx.fillStyle = 'rgb(98,98,98)';
+    game.ctx.textAlign = 'center';
+    game.ctx.textBaseline = 'hanging';
+    game.ctx.font = `bold ${fontSize}px MainFont`;
+    game.ctx.fillText(`${Math.ceil(this.timeLeft/100)/10}`, 0, 0);
+    game.ctx.restore();
+  }
+
+  animate (callBack) {
+    let animation = new TWEEN.Tween(this).to({timeLeft:0}, this.animationTime).onComplete(callBack).start();
+  }
 }
 
 let game = new Game();
