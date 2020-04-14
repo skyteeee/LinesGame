@@ -224,7 +224,7 @@ class Game {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, doubleBall, regular, regular, regular, regular, regular, regular];
-    this.forcedBallTypes = [colorWave, colorWave];
+    this.forcedBallTypes = [];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
 
