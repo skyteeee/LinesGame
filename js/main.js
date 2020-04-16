@@ -138,6 +138,7 @@ const rainbow = 'rainbow';
 const contractionBall = 'contraction';
 const superBomb = 'superBomb';
 const colorWave = 'colorWave';
+const x3Ball = 'x3';
 
 class Game {
   constructor() {
@@ -224,7 +225,7 @@ class Game {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, doubleBall, regular, regular, regular, regular, regular, regular];
-    this.forcedBallTypes = [];
+    this.forcedBallTypes = [x3Ball];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
 
@@ -293,9 +294,8 @@ class Game {
     }
   }
 
-  changeScore(multiplier, ball) {
-    let score = ball.getScore()
-    this.earnedScore = Math.floor(this.earnedScore + score * multiplier);
+  changeScore(multiplier, score, secondMultiplier=1) {
+    this.earnedScore = Math.floor(this.earnedScore + score * multiplier * secondMultiplier);
   }
 
   addBlockedCell (cell) {
@@ -715,7 +715,7 @@ class Game {
   }
 
   vanishCallBack(cell, isLast) {
-    if (!cell.ball.isDisabled) {
+    if (cell.ball && !cell.ball.isDisabled) {
       if (cell.ball instanceof ExpansionBall) {
         this.expandAnimation();
       }
@@ -743,13 +743,18 @@ class Game {
 
   removeBalls (cellArray, onComplete) {
     let delay = 0;
+    let score = 0;
+    let secondMultiplier = 1;
     if (cellArray.length >= this.inARowToVanish+1) {
       this.possibleBallTypes.push(rainbow);
     }
     for (let index in cellArray) {
       let cell = cellArray[index];
+      score += cell.ball.getScore();
       this.addBlockedCell(cell);
-      this.changeScore(this.multiplier, cell.ball);
+      if (cell.ball.getType() === x3Ball) {
+        secondMultiplier *= 3;
+      }
       this.incrementRemovedBalls();
       cell.ball.vanish(() => {
         let isLast = parseInt(index) === cellArray.length-1;
@@ -759,11 +764,12 @@ class Game {
           cell.handleSelect(false, this);
           onComplete(cell, isLast)
         } else {
-          this.vanishCallBack(cell, isLast)
+          this.vanishCallBack(cell, isLast);
         }
       }, delay);
       delay += 100;
     }
+    this.changeScore(this.multiplier, score, secondMultiplier);
   }
 
   incrementRemovedBalls() {
@@ -864,6 +870,11 @@ class Game {
         let colorIdx = this.getRandomColorIdx();
         let color = this.possibleBallColors[colorIdx];
         return new ColorWave(x, y, this.cellWidth, this.cellHeight, colorIdx, color);
+      }
+      case x3Ball: {
+        let colorIdx = this.getRandomColorIdx();
+        let color = this.possibleBallColors[colorIdx];
+        return new X3Ball(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
       }
     }
   }
@@ -1477,6 +1488,33 @@ class ColorWaveTimer {
 
   animate (callBack) {
     let animation = new TWEEN.Tween(this).to({timeLeft:0}, this.animationTime).onComplete(callBack).start();
+  }
+}
+
+class X3Ball extends RegularBall {
+  constructor(x, y, colorIdx, color, cellWidth, cellHeight) {
+    super(x, y, colorIdx, color, cellWidth, cellHeight);
+    this.opacity = 1;
+  }
+
+  getType() {
+    return x3Ball;
+  }
+
+  drawBall(game) {
+    super.drawBall(game);
+    let radius = Math.floor(this.cellHeight*0.3125);
+    game.ctx.font = `bold ${radius*0.55}px SmallPixel`;
+    game.ctx.textAlign = 'center';
+    game.ctx.textBaseline = 'middle';
+    game.ctx.fillStyle = `rgba(0,0,0,${this.opacity})`;
+    game.ctx.fillText('x3', 0, 0);
+  }
+
+  vanish(onComplete, delay = 0) {
+    super.vanish(onComplete, delay);
+    let textVanish = new TWEEN.Tween(this).to({opacity:0}, 300).easing(TWEEN.Easing.Quadratic.In)
+      .delay(delay).start();
   }
 }
 
