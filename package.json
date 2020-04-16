@@ -1,0 +1,38 @@
+{
+  "name": "Lines",
+  "version": "2.0.0",
+  "description": "Lines game",
+  "main": "main.js",
+  "repository": "https://github.com/skyteeee/LinesGame.git",
+  "author": "SkyTeeee",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.9.0",
+    "@babel/preset-env": "^7.9.5",
+    "babelify": "^10.0.0",
+    "browserify": "^16.5.1",
+    "terser": "^4.6.11",
+    "watchify": "^3.11.1"
+  },
+  "scripts": {
+    "build-js": "browserify -d ./js/main.js -o ./public/js/bundle.js",
+    "build": "browserify ./js/main.js | terser -c -m -o ./public/js/bundle.js",
+    "watch": "watchify ./js/main.js -o ./public/js/bundle.js -v -d"
+  },
+  "dependencies": {
+    "@tweenjs/tween.js": "https://github.com/NorthernCaptain/tween.js.git"
+  },
+  "browserify": {
+    "debug": true,
+    "transform": [
+      [
+        "babelify",
+        {
+          "presets": [
+            "@babel/preset-env"
+          ]
+        }
+      ]
+    ]
+  }
+}
