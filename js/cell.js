@@ -1,8 +1,9 @@
 
 export class Cell {
-  constructor(x, y) {
+  constructor(x, y, game) {
     this.x = x;
     this.y = y;
+    this.game = game;
     this.ball = null;
     this.selected = false;
   }
@@ -14,10 +15,10 @@ export class Cell {
     this.ball.y = this.y;
   }
 
-  handleSelect (state, game) {
+  handleSelect (state) {
     this.selected = state;
     if (state && this.ball) {
-      this.ball.selected(game);
+      this.ball.selected();
     } else {
       if (this.ball) {
         this.ball.deselect();
@@ -25,49 +26,49 @@ export class Cell {
     }
   }
 
-  innerDraw (game) {
-    let x = -game.cellWidth2;
-    let y = -game.cellHeight2;
-    let x2 = x + game.cellWidth - 1;
-    let y2 = y + game.cellHeight - 1;
+  innerDraw () {
+    let x = -this.game.cellWidth2;
+    let y = -this.game.cellHeight2;
+    let x2 = x + this.game.cellWidth - 1;
+    let y2 = y + this.game.cellHeight - 1;
 
     if (this.selected) {
-      game.ctx.fillStyle = '#cbcbcb';
-      game.ctx.fillRect(x+1, y+1, game.cellWidth-2, game.cellHeight-2);
+      this.game.ctx.fillStyle = '#cbcbcb';
+      this.game.ctx.fillRect(x+1, y+1, this.game.cellWidth-2, this.game.cellHeight-2);
     } else {
-      game.ctx.clearRect(x+1, y+1, game.cellWidth - 2, game.cellHeight - 2);
+      this.game.ctx.clearRect(x+1, y+1, this.game.cellWidth - 2, this.game.cellHeight - 2);
     }
 
-    game.ctx.strokeStyle = '#fafffb';
-    game.ctx.beginPath();
-    game.ctx.moveTo(x2, y);
-    game.ctx.lineTo(x, y);
-    game.ctx.lineTo(x, y2);
-    game.ctx.stroke();
+    this.game.ctx.strokeStyle = '#fafffb';
+    this.game.ctx.beginPath();
+    this.game.ctx.moveTo(x2, y);
+    this.game.ctx.lineTo(x, y);
+    this.game.ctx.lineTo(x, y2);
+    this.game.ctx.stroke();
 
-    game.ctx.strokeStyle = '#c8cdc9';
-    game.ctx.beginPath();
-    game.ctx.moveTo(x2, y);
-    game.ctx.lineTo(x2, y2);
-    game.ctx.lineTo(x, y2);
-    game.ctx.stroke();
+    this.game.ctx.strokeStyle = '#c8cdc9';
+    this.game.ctx.beginPath();
+    this.game.ctx.moveTo(x2, y);
+    this.game.ctx.lineTo(x2, y2);
+    this.game.ctx.lineTo(x, y2);
+    this.game.ctx.stroke();
 
   }
 
 
-  drawCell (game) {
-    game.ctx.save();
-    game.ctx.translate(game.cellWidth * this.x + game.cellWidth2, game.cellHeight * this.y + game.cellHeight2);
-    this.innerDraw(game);
-    game.ctx.restore();
+  drawCell () {
+    this.game.ctx.save();
+    this.game.ctx.translate(this.game.cellWidth * this.x + this.game.cellWidth2, this.game.cellHeight * this.y + this.game.cellHeight2);
+    this.innerDraw();
+    this.game.ctx.restore();
   }
 
-  drawBall (game) {
+  drawBall () {
     if (this.ball) {
-      game.ctx.save();
-      game.ctx.translate(game.cellWidth * this.x + game.cellWidth2, game.cellHeight * this.y + game.cellHeight2);
-      this.ball.drawBall(game);
-      game.ctx.restore();
+      this.game.ctx.save();
+      this.game.ctx.translate(this.game.cellWidth * this.x + this.game.cellWidth2, this.game.cellHeight * this.y + this.game.cellHeight2);
+      this.ball.drawBall();
+      this.game.ctx.restore();
     }
   }
 

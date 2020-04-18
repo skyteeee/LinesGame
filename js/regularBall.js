@@ -4,8 +4,8 @@ import TWEEN from "@tweenjs/tween.js";
 export const regular = 'regular';
 
 export class RegularBall extends Ball {
-  constructor(x, y, colorIdx, color, cellWidth, cellHeight) {
-    super(x,y,cellWidth, cellHeight);
+  constructor(x, y, colorIdx, color, cellWidth, cellHeight, game) {
+    super(x,y,cellWidth, cellHeight, game);
     this.colors.add(colorIdx);
     this.color = color.clone();
     this.colorIdx = colorIdx;
@@ -25,22 +25,22 @@ export class RegularBall extends Ball {
       .delay(delay).start();
   }
 
-  drawBall (game) {
-    super.drawBall(game);
-    let x = -game.cellWidth2;
-    let y = -game.cellHeight2;
+  drawBall () {
+    super.drawBall();
+    let x = -this.game.cellWidth2;
+    let y = -this.game.cellHeight2;
     let color = this.color.iRequestNormalColor();
     let xy0 = Math.floor(this.cellHeight*0.15);
     let radius = Math.floor(this.cellWidth*0.3125);
 
-    let gradient = game.ctx.createRadialGradient(-xy0, -xy0, 0, 0, 0, radius);
+    let gradient = this.game.ctx.createRadialGradient(-xy0, -xy0, 0, 0, 0, radius);
 
     gradient.addColorStop(0, 'white');
     gradient.addColorStop(0.7, color);
     gradient.addColorStop(0.9, color);
     gradient.addColorStop(1, 'transparent');
 
-    game.ctx.fillStyle = gradient;
-    game.ctx.fillRect(x, y, game.cellWidth, game.cellHeight);
+    this.game.ctx.fillStyle = gradient;
+    this.game.ctx.fillRect(x, y, this.game.cellWidth, this.game.cellHeight);
   }
 }

@@ -2,9 +2,10 @@ import TWEEN from "@tweenjs/tween.js";
 import {xy2screen} from "./tools";
 
 export class Ball {
-  constructor(x, y, cellWidth, cellHeight) {
+  constructor(x, y, cellWidth, cellHeight, game) {
     this.px = 0;
     this.py = 0;
+    this.game = game;
     this.x = x;
     this.y = y;
     this.scaleX = 0;
@@ -30,10 +31,10 @@ export class Ball {
     return 'ball';
   }
 
-  drawBall (game) {
-    game.ctx.translate (this.px, this.py);
-    game.ctx.scale(this.scaleX, this.scaleY);
-    game.ctx.rotate(this.angle);
+  drawBall () {
+    this.game.ctx.translate (this.px, this.py);
+    this.game.ctx.scale(this.scaleX, this.scaleY);
+    this.game.ctx.rotate(this.angle);
   }
 
   vanish (onComplete,delay = 0) {
@@ -70,16 +71,16 @@ export class Ball {
     animation.start();
   }
 
-  selected (game) {
+  selected () {
     let goDown = new TWEEN.Tween(this).to({py: 0, scaleY:1, scaleX:1}, 300)
       .easing(TWEEN.Easing.Quadratic.In);
-    let squeeze = new TWEEN.Tween(this).to({scaleX: 1.25, scaleY:0.75, py:game.cellHeight/8}, 300)
+    let squeeze = new TWEEN.Tween(this).to({scaleX: 1.25, scaleY:0.75, py:this.game.cellHeight/8}, 300)
       .easing(TWEEN.Easing.Quadratic.Out);
     let unsqueeze = new TWEEN.Tween(this).to({scaleX: 1, scaleY:1, py: 0}, 200)
       .easing(TWEEN.Easing.Quadratic.In);
 
     this.selectedTween = new TWEEN.Tween(this)
-      .to({py: -game.cellHeight/4, scaleY: 1.05, scaleX: 0.95}, 500)
+      .to({py: -this.game.cellHeight/4, scaleY: 1.05, scaleX: 0.95}, 500)
       .easing(TWEEN.Easing.Quadratic.Out)
       .chain(goDown);
     goDown.chain(squeeze);

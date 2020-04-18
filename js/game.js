@@ -118,7 +118,7 @@ export class Game {
     for (let y = 0; y < this.fieldHeight; y++) {
       let row = [];
       for (let x = 0; x < this.fieldWidth; x++) {
-        let cell = new Cell(x, y);
+        let cell = new Cell(x, y, this);
         row.push(cell);
       }
       this.field.push(row);
@@ -255,7 +255,7 @@ export class Game {
       if (state) {
         this.removeBalls(ballsToRemove);
         let pixel = xy2screen(x, y, this);
-        let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY);
+        let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY, this);
         floating.animate(this);
         this.scoreAnimation();
       }
@@ -313,13 +313,17 @@ export class Game {
     let cellPressed = this.field[cellY][cellX];
     if (cellPressed.ball !== null) {
       if (this.from) {
-        this.from.handleSelect(false, this);
+        this.from.handleSelect(false);
       }
-      this.from = cellPressed;
-      cellPressed.handleSelect(true, this);
+      if (this.from !== cellPressed) {
+        this.from = cellPressed;
+        cellPressed.handleSelect(true);
+      } else {
+        this.from = null;
+      }
     } else {
       if (this.from) {
-        this.from.handleSelect(false, this);
+        this.from.handleSelect(false);
         cellPressed.setBall(this.from.ball);
         let from = this.from;
         this.addBlockedCell(from);
@@ -364,10 +368,14 @@ export class Game {
 
   addBallToField (selectedCell) {
     selectedCell.ball = this.createBall(selectedCell.x, selectedCell.y);
-    selectedCell.ball.appear(this.delay, () => {
-      this.removeBlockedCell(selectedCell);
-    });
-    this.delay = this.delay + 100;
+    if (selectedCell.ball) {
+      selectedCell.ball.appear(this.delay, () => {
+        this.removeBlockedCell(selectedCell);
+      });
+      this.delay = this.delay + 100;
+    } else {
+      this.addBallToField(selectedCell);
+    }
   }
 
   initRandomCell(emptyCells) {
@@ -452,7 +460,7 @@ export class Game {
       for (let row of this.field) {
         for (let cell of row) {
           if (cell.ball && cell.ball.colorIdx === colorIdx && !cell.ball.isVanishing) {
-            cell.setBall(new ColorWave(cell.x, cell.y, this.cellWidth, this.cellHeight, colorIdx, color));
+            cell.setBall(new ColorWave(cell.x, cell.y, this.cellWidth, this.cellHeight, colorIdx, color, this));
             cell.ball.appear(counter*50, () => {cell.ball.dribble()});
             counter++;
           }
@@ -461,7 +469,7 @@ export class Game {
       if (counter === 0) {
         return;
       }
-      this.colorWaveTimer = new ColorWaveTimer(5000);
+      this.colorWaveTimer = new ColorWaveTimer(5000, this);
       this.addOverallObject(this.colorWaveTimer);
       this.colorWaveTimer.animate(() => {
         this.turnOffColorWaveMode(colorIdx);
@@ -496,7 +504,7 @@ export class Game {
       for (let cell of row) {
         if (cell.ball && cell.ball.getType() === colorWave &&
           cell.ball.colorIdx === colorIdx && !cell.ball.isVanishing) {
-          cell.setBall(new RegularBall(cell.x, cell.y, colorIdx, color, this.cellWidth, this.cellHeight));
+          cell.setBall(new RegularBall(cell.x, cell.y, colorIdx, color, this.cellWidth, this.cellHeight, this));
           cell.ball.appear();
         }
       }
@@ -574,7 +582,7 @@ export class Game {
       let row = this.field[rowIdx];
 
       for (let cell of row) {
-        cell.handleSelect(false, this);
+        cell.handleSelect(false);
         if (cell.ball) {
           cell.ball.setDisabled(true);
           balls.push(cell);
@@ -604,7 +612,7 @@ export class Game {
       }
     }
     cell.ball = null;
-    cell.handleSelect(false, this);
+    cell.handleSelect(false);
     if (isLast) {
       this.levelUpIfNeeded();
       this.removeBlock();
@@ -635,7 +643,7 @@ export class Game {
         this.removeBlockedCell(cell);
         if (onComplete) {
           cell.ball = null;
-          cell.handleSelect(false, this);
+          cell.handleSelect(false);
           onComplete(cell, isLast)
         } else {
           this.vanishCallBack(cell, isLast);
@@ -709,11 +717,11 @@ export class Game {
       case regular: {
         let colorIdx = this.getRandomColorIdx();
         let color = this.possibleBallColors[colorIdx];
-        return new RegularBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
+        return new RegularBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight, this);
       }
       case rainbow: {
         this.removeBallType(rainbow);
-        return new RainbowBall(x, y, this.cellHeight, this.cellWidth, this.possibleBallColors);
+        return new RainbowBall(x, y, this.cellHeight, this.cellWidth, this.possibleBallColors,this);
       }
       case doubleBall: {
         let colorIdx1 = this.getRandomColorIdx();
@@ -721,34 +729,34 @@ export class Game {
         while (colorIdx1 === colorIdx2) {
           colorIdx2 = this.getRandomColorIdx();
         }
-        return new DoubleBall(x, y, this.cellWidth, this.cellHeight, colorIdx1, colorIdx2, this.possibleBallColors);
+        return new DoubleBall(x, y, this.cellWidth, this.cellHeight, colorIdx1, colorIdx2, this.possibleBallColors, this);
       }
       case expansionBall: {
         this.removeBallType(expansionBall);
         let colorIdx = this.getRandomColorIdx();
         let color = this.possibleBallColors[colorIdx];
-        return new ExpansionBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
+        return new ExpansionBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight, this);
       }
       case contractionBall: {
         this.removeBallType(contractionBall);
         let colorIdx = this.getRandomColorIdx();
         let color = this.possibleBallColors[colorIdx];
-        return new ContractionBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
+        return new ContractionBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight, this);
       }
       case superBomb: {
         this.removeBallType(superBomb);
-        return new SuperBomb(x, y, this.cellWidth, this.cellHeight, this.possibleBallColors);
+        return new SuperBomb(x, y, this.cellWidth, this.cellHeight, this.possibleBallColors, this);
       }
       case colorWave: {
         this.removeBallType(colorWave);
         let colorIdx = this.getRandomColorIdx();
         let color = this.possibleBallColors[colorIdx];
-        return new ColorWave(x, y, this.cellWidth, this.cellHeight, colorIdx, color);
+        return new ColorWave(x, y, this.cellWidth, this.cellHeight, colorIdx, color, this);
       }
       case x3Ball: {
         let colorIdx = this.getRandomColorIdx();
         let color = this.possibleBallColors[colorIdx];
-        return new X3Ball(x, y, colorIdx, color, this.cellWidth, this.cellHeight);
+        return new X3Ball(x, y, colorIdx, color, this.cellWidth, this.cellHeight, this);
       }
     }
   }
@@ -842,7 +850,7 @@ export class Game {
   drawLast () {
     for (let index in this.drawOverAll) {
       let object = this.drawOverAll[index];
-      object.draw(this);
+      object.draw();
     }
   }
 
