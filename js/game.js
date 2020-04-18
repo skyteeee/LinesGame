@@ -12,22 +12,17 @@ import {ColorWaveTimer} from "./colorWaveTimer";
 import {superBomb, SuperBomb} from "./superBomb";
 import {rainbow, RainbowBall} from "./rainbowBall";
 import {X3Ball, x3Ball} from "./x3Ball";
+import {Base} from "./base";
 
-export class Game {
+export class Game extends Base {
   constructor() {
+    super();
     this.canvas = null;
     this.ctx = null;
     this.from = null;
-    this.height = 0;
-    this.width = 0;
     this.delay = 0;
     this.scaleX = 1;
     this.scaleY = 1;
-    this.cellHeight = 0;
-    this.cellWidth = 0;
-    this.cellHeight2 = 0;
-    this.cellWidth2 = 0;
-    this.hudHeight = 0;
     this.blockedCells = [];
     this.drawOverAll = [];
     this.blockClick = false;
@@ -131,20 +126,12 @@ export class Game {
     this.canvas = document.getElementById('field');
     this.canvas.onclick = (event) => {this.onClick(event.offsetX, event.offsetY);};
     this.ctx = this.canvas.getContext('2d');
-
+    this.initEngine();
     this.gameHeight = this.canvas.offsetHeight;
     this.width = this.canvas.offsetWidth;
-    this.hudHeight = this.gameHeight-this.width;
     this.height = this.gameHeight - this.hudHeight;
-    this.cellHeight = this.height / this.fieldHeight;
-    this.cellWidth = this.width / this.fieldWidth;
-    this.cellHeight2 = this.cellHeight / 2;
-    this.cellWidth2 = this.cellWidth / 2;
     this.canvas.width = this.width;
     this.canvas.height = this.gameHeight;
-
-
-    console.log('canvas size is ', this.gameHeight, ':', this.width);
     this.generateBalls();
   }
 

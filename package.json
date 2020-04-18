@@ -20,7 +20,8 @@
     "watch": "watchify ./js/main.js -o ./public/js/bundle.js -v -d"
   },
   "dependencies": {
-    "@tweenjs/tween.js": "https://github.com/NorthernCaptain/tween.js.git"
+    "@tweenjs/tween.js": "https://github.com/NorthernCaptain/tween.js.git",
+    "pixi.js": "^5.2.1"
   },
   "browserify": {
     "debug": true,
