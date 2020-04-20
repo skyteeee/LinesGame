@@ -70,6 +70,21 @@ export class Base {
 
     let graphics = this.createFieldGraphics();
     this.cnt.background.addChild(graphics);
+
+    this.app.loader.add('img/images2.json').load(() => {this.setupResources()})
+  }
+
+  setupResources () {
+    this.tex = {allImg:this.app.loader.resources['img/images2.json'].textures};
+    this.tex.ballImg = [
+    this.tex.allImg['ball_red.png'],
+    this.tex.allImg['ball_orange.png'],
+    this.tex.allImg['ball_yellow.png'],
+    this.tex.allImg['ball_green.png'],
+    this.tex.allImg['ball_lblue.png'],
+    this.tex.allImg['ball_blue.png'],
+    this.tex.allImg['ball_violet.png'],
+    ]
   }
 
 }

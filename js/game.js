@@ -92,8 +92,8 @@ export class Game extends Base {
     this.levelToAddColor = 3;
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
-    this.possibleBallTypes = [regular, regular, regular, doubleBall, regular, regular, regular, regular, regular, regular];
-    this.forcedBallTypes = [x3Ball];
+    this.possibleBallTypes = [regular, regular, regular, regular, regular, regular, regular, regular, regular];
+    this.forcedBallTypes = [];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
 
@@ -132,6 +132,10 @@ export class Game extends Base {
     this.height = this.gameHeight - this.hudHeight;
     this.canvas.width = this.width;
     this.canvas.height = this.gameHeight;
+  }
+
+  setupResources() {
+    super.setupResources();
     this.generateBalls();
   }
 

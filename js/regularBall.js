@@ -1,5 +1,6 @@
 import {Ball} from "./ball";
 import TWEEN from "@tweenjs/tween.js";
+import * as PIXI from 'pixi.js';
 
 export const regular = 'regular';
 
@@ -9,6 +10,10 @@ export class RegularBall extends Ball {
     this.colors.add(colorIdx);
     this.color = color.clone();
     this.colorIdx = colorIdx;
+    this.sprite = new PIXI.Sprite(this.game.tex.ballImg[colorIdx]);
+    this.ballCont.addChild(this.sprite);
+    this.sprite.anchor.set(0.5);
+    this.sprite.scale.set(this.cellWidth / this.sprite.width * 0.625)
   }
 
   getScore() {
@@ -21,7 +26,7 @@ export class RegularBall extends Ball {
 
   vanish (onComplete,delay = 0) {
     super.vanish(onComplete, delay);
-    let alphaChange = new TWEEN.Tween(this.color).to({alpha:0},300).easing(TWEEN.Easing.Quadratic.In)
+    let alphaChange = new TWEEN.Tween(this.sprite).to({alpha:0},300).easing(TWEEN.Easing.Quadratic.In)
       .delay(delay).start();
   }
 
