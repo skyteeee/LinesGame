@@ -128,7 +128,7 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
-"overlay_contract.png":
+"diamond_blue.png":
 {
 	"frame": {"x":100,"y":300,"w":100,"h":100},
 	"rotated": false,
@@ -136,7 +136,7 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
-"overlay_expand.png":
+"diamond_green.png":
 {
 	"frame": {"x":200,"y":300,"w":100,"h":100},
 	"rotated": false,
@@ -144,7 +144,7 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
-"overlay_x3.png":
+"diamond_lblue.png":
 {
 	"frame": {"x":300,"y":300,"w":100,"h":100},
 	"rotated": false,
@@ -152,15 +152,15 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
-"particle_ball.png":
+"diamond_orange.png":
 {
-	"frame": {"x":400,"y":300,"w":44,"h":44},
+	"frame": {"x":400,"y":300,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":44,"h":44},
-	"sourceSize": {"w":44,"h":44}
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
+	"sourceSize": {"w":100,"h":100}
 },
-"thalf_ball_blue.png":
+"diamond_red.png":
 {
 	"frame": {"x":0,"y":400,"w":100,"h":100},
 	"rotated": false,
@@ -168,7 +168,7 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
-"thalf_ball_green.png":
+"diamond_violet.png":
 {
 	"frame": {"x":100,"y":400,"w":100,"h":100},
 	"rotated": false,
@@ -176,7 +176,7 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
-"thalf_ball_lblue.png":
+"diamond_yellow.png":
 {
 	"frame": {"x":200,"y":400,"w":100,"h":100},
 	"rotated": false,
@@ -184,7 +184,7 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
-"thalf_ball_orange.png":
+"overlay_contract.png":
 {
 	"frame": {"x":300,"y":400,"w":100,"h":100},
 	"rotated": false,
@@ -192,7 +192,7 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
-"thalf_ball_red.png":
+"overlay_expand.png":
 {
 	"frame": {"x":400,"y":400,"w":100,"h":100},
 	"rotated": false,
@@ -200,7 +200,7 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
-"thalf_ball_violet.png":
+"overlay_x3.png":
 {
 	"frame": {"x":0,"y":500,"w":100,"h":100},
 	"rotated": false,
@@ -208,9 +208,65 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
+"particle_ball.png":
+{
+	"frame": {"x":100,"y":500,"w":44,"h":44},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":44,"h":44},
+	"sourceSize": {"w":44,"h":44}
+},
+"thalf_ball_blue.png":
+{
+	"frame": {"x":144,"y":500,"w":100,"h":100},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
+	"sourceSize": {"w":100,"h":100}
+},
+"thalf_ball_green.png":
+{
+	"frame": {"x":244,"y":500,"w":100,"h":100},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
+	"sourceSize": {"w":100,"h":100}
+},
+"thalf_ball_lblue.png":
+{
+	"frame": {"x":344,"y":500,"w":100,"h":100},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
+	"sourceSize": {"w":100,"h":100}
+},
+"thalf_ball_orange.png":
+{
+	"frame": {"x":0,"y":600,"w":100,"h":100},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
+	"sourceSize": {"w":100,"h":100}
+},
+"thalf_ball_red.png":
+{
+	"frame": {"x":100,"y":600,"w":100,"h":100},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
+	"sourceSize": {"w":100,"h":100}
+},
+"thalf_ball_violet.png":
+{
+	"frame": {"x":200,"y":600,"w":100,"h":100},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
+	"sourceSize": {"w":100,"h":100}
+},
 "thalf_ball_yellow.png":
 {
-	"frame": {"x":100,"y":500,"w":100,"h":100},
+	"frame": {"x":300,"y":600,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -225,6 +281,6 @@
 	"format": "RGBA8888",
 	"size": {"w":512,"h":1024},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:53053a5a1a7a81a72ee02e1d24d61a19:49716ab18c4a7149ae6e88eebdd6e647:f30665c6e687dce4ac97429165633ad7$"
+	"smartupdate": "$TexturePacker:SmartUpdate:70f4578524fe8881b84112e6d56959ac:d2d81e4fc3f7a384ba95ed292527d3e5:f30665c6e687dce4ac97429165633ad7$"
 }
 }

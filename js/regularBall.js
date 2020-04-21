@@ -13,7 +13,7 @@ export class RegularBall extends Ball {
     this.sprite = new PIXI.Sprite(this.game.tex.ballImg[colorIdx]);
     this.ballCont.addChild(this.sprite);
     this.sprite.anchor.set(0.5);
-    this.sprite.scale.set(this.cellWidth / this.sprite.width * 0.625)
+    this.sprite.scale.set(this.cellWidth / this.sprite.width * Ball.defaultScaleMultiplier);
   }
 
   getScore() {

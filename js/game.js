@@ -93,7 +93,7 @@ export class Game extends Base {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, regular, regular, regular, regular];
-    this.forcedBallTypes = [];
+    this.forcedBallTypes = [contractionBall, expansionBall, superBomb];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
 
@@ -271,6 +271,7 @@ export class Game extends Base {
   }
 
   onClick(x, y) {
+    console.log('Touch coords are ', x, y, 'cell w/h: ', this.cellWidth, '/', this.cellHeight);
     if (!this.blockClick) {
       if (!this.isColorWaveModeOn) {
         this.regularClick(x, y);
@@ -282,7 +283,7 @@ export class Game extends Base {
 
   colorWaveClick(x, y) {
     let cellX = Math.floor(x / this.cellWidth);
-    let cellY = Math.floor((y - this.hudHeight) / this.cellHeight);
+    let cellY = Math.floor(y / this.cellHeight);
     if (this.checkForBlockedCell(cellX, cellY)){
       return;
     }
@@ -296,7 +297,7 @@ export class Game extends Base {
   regularClick(x, y) {
     this.operateGameOver();
     let cellX = Math.floor(x / this.cellWidth);
-    let cellY = Math.floor((y - this.hudHeight) / this.cellHeight);
+    let cellY = Math.floor(y / this.cellHeight);
     if (this.checkForBlockedCell(cellX, cellY)) {
       return;
     }

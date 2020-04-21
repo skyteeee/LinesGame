@@ -10,6 +10,6 @@ function onResize() {
 }
 
 window.onload = init;
-window.onresize = onResize;
 
 let game = new Game();
+window.game = game;

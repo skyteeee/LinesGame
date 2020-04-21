@@ -2,7 +2,11 @@ import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from 'pixi.js';
 import {xy2screen} from "./tools";
 
+
 export class Ball {
+
+  static defaultScaleMultiplier = 0.625;
+
   constructor(x, y, cellWidth, cellHeight, game) {
     this.px = 0;
     this.py = 0;
@@ -85,7 +89,7 @@ export class Ball {
 
   selected () {
     let scale = {py: xy2screen(this.x, this.y, this).pY, scaleY:1, scaleX:1};
-    let goDown = new TWEEN.Tween(scale).to({py: 0, scaleY:1, scaleX:1}, 300)
+    let goDown = new TWEEN.Tween(scale).to({py: scale.py, scaleY:1, scaleX:1}, 300)
       .easing(TWEEN.Easing.Quadratic.In)
         .onUpdate((obj) => {
         this.ballCont.y = obj.py;

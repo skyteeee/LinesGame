@@ -22,7 +22,6 @@ export class Base {
     gfx.drawRect(0,0, this.width, gameHeight);
     gfx.endFill();
 
-
     for (let x=0; x<this.width; x+=this.cellWidth) {
       for (let y = 0; y<gameHeight; y+=this.cellHeight){
         gfx.lineStyle(1, 0xfafffb);
@@ -54,6 +53,7 @@ export class Base {
     this.app = new PIXI.Application({width:this.width, height:this.height,
       antialias:true, backgroundColor:0xe4e400, resolution: window.devicePixelRatio || 1});
     div.appendChild(this.app.view);
+    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
 
     this.cnt.HUD = new PIXI.Container();
     this.cnt.field = new PIXI.Container();
@@ -69,9 +69,19 @@ export class Base {
     this.cnt.field.y = this.hudHeight;
 
     let graphics = this.createFieldGraphics();
+    graphics.interactive = true;
+    graphics.on('pointerdown', (event) => {
+      let pressCoord = graphics.toLocal(event.data.global);
+
+      this.onClick(pressCoord.x, pressCoord.y);
+    });
     this.cnt.background.addChild(graphics);
 
     this.app.loader.add('img/images2.json').load(() => {this.setupResources()})
+  }
+
+  onClick (x, y) {
+
   }
 
   setupResources () {
@@ -84,7 +94,36 @@ export class Base {
     this.tex.allImg['ball_lblue.png'],
     this.tex.allImg['ball_blue.png'],
     this.tex.allImg['ball_violet.png'],
-    ]
+    ];
+    this.tex.ballOverlay = {
+      x3: this.tex.allImg['overlay_x3.png'],
+      contract: this.tex.allImg['overlay_contract.png'],
+      expand: this.tex.allImg['overlay_expand.png'],
+      rainbow: this.tex.allImg['ball_rainbow.png'],
+      superBomb: this.tex.allImg['ball_superbomb.png']
+    };
+
+    this.tex.double = {};
+    this.tex.double.top = [
+      this.tex.allImg['thalf_ball_red.png'],
+      this.tex.allImg['thalf_ball_orange.png'],
+      this.tex.allImg['thalf_ball_yellow.png'],
+      this.tex.allImg['thalf_ball_green.png'],
+      this.tex.allImg['thalf_ball_lblue.png'],
+      this.tex.allImg['thalf_ball_blue.png'],
+      this.tex.allImg['thalf_ball_violet.png'],
+    ];
+
+    this.tex.double.bottom = [
+      this.tex.allImg['bhalf_ball_red.png'],
+      this.tex.allImg['bhalf_ball_orange.png'],
+      this.tex.allImg['bhalf_ball_yellow.png'],
+      this.tex.allImg['bhalf_ball_green.png'],
+      this.tex.allImg['bhalf_ball_lblue.png'],
+      this.tex.allImg['bhalf_ball_blue.png'],
+      this.tex.allImg['bhalf_ball_violet.png'],
+    ];
+
   }
 
 }

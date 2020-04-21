@@ -197,6 +197,13 @@
             <key type="filename">lines/bhalf_ball_red.png</key>
             <key type="filename">lines/bhalf_ball_violet.png</key>
             <key type="filename">lines/bhalf_ball_yellow.png</key>
+            <key type="filename">lines/diamond_blue.png</key>
+            <key type="filename">lines/diamond_green.png</key>
+            <key type="filename">lines/diamond_lblue.png</key>
+            <key type="filename">lines/diamond_orange.png</key>
+            <key type="filename">lines/diamond_red.png</key>
+            <key type="filename">lines/diamond_violet.png</key>
+            <key type="filename">lines/diamond_yellow.png</key>
             <key type="filename">lines/overlay_contract.png</key>
             <key type="filename">lines/overlay_expand.png</key>
             <key type="filename">lines/overlay_x3.png</key>
@@ -266,6 +273,13 @@
             <filename>lines/thalf_ball_violet.png</filename>
             <filename>lines/thalf_ball_yellow.png</filename>
             <filename>lines/particle_ball.png</filename>
+            <filename>lines/diamond_blue.png</filename>
+            <filename>lines/diamond_green.png</filename>
+            <filename>lines/diamond_lblue.png</filename>
+            <filename>lines/diamond_orange.png</filename>
+            <filename>lines/diamond_red.png</filename>
+            <filename>lines/diamond_violet.png</filename>
+            <filename>lines/diamond_yellow.png</filename>
         </array>
         <key>ignoreFileList</key>
         <array/>
