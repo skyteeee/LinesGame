@@ -1,5 +1,6 @@
 import {Ball} from "./ball";
 import TWEEN from "@tweenjs/tween.js";
+import * as PIXI from 'pixi.js';
 
 export const colorWave = 'colorWave';
 
@@ -8,6 +9,10 @@ export class ColorWave extends Ball {
     super(x, y, cellWidth, cellHeight, game);
     this.colors.add(colorIdx);
     this.colorIdx = colorIdx;
+    this.sprite = new PIXI.Sprite(this.game.tex.colorWaveTex[colorIdx]);
+    this.ballCont.addChild(this.sprite);
+    this.sprite.anchor.set(0.5);
+    this.sprite.scale.set(this.cellWidth / this.sprite.width * Ball.defaultScaleMultiplier);
     this.color = color.clone();
   }
   getType() {
@@ -69,8 +74,8 @@ export class ColorWave extends Ball {
   }
 
   selected() {
-    let rotation = new TWEEN.Tween(this).to({angle:Math.PI*2}, 3000).repeat(Infinity).start();
-    let scaling = new TWEEN.Tween(this).to({scaleY:0.9, scaleX:0.9}, 500).repeat(Infinity)
+    let rotation = new TWEEN.Tween(this.ballCont).to({angle:360}, 3000).repeat(Infinity).start();
+    let scaling = new TWEEN.Tween(this.ballCont.scale).to({y:0.75, x:0.75}, 500).repeat(Infinity)
       .yoyo(true).easing(TWEEN.Easing.Elastic.In).start();
     this.selectedTween = [rotation, scaling];
   }
@@ -81,19 +86,19 @@ export class ColorWave extends Ball {
       this.dribbleTween.stop();
       this.dribbleTween = null;
     }
-    let rescale = new TWEEN.Tween(this).to({scaleX:0, scaleY:0}, 300).easing(TWEEN.Easing.Quadratic.In)
+    let rescale = new TWEEN.Tween(this.ballCont.scale).to({x:0, y:0}, 300).easing(TWEEN.Easing.Quadratic.In)
       .delay(delay).start();
-    let rotation = new TWEEN.Tween(this).to({angle:Math.PI*2}, 300).easing(TWEEN.Easing.Quadratic.In)
+    let rotation = new TWEEN.Tween(this.ballCont).to({angle:360}, 300).easing(TWEEN.Easing.Quadratic.In)
       .delay(delay).onComplete(onComplete).start();
   }
 
   dribble () {
-    let angle = Math.PI/180*15;
-    this.angle = -angle;
+    let angle = 15;
+    this.ballCont.angle = -angle;
 
-    let animation = new TWEEN.Tween(this).to({angle:angle}, 200);
+    let animation = new TWEEN.Tween(this.ballCont).to({angle:angle}, 200);
 
-    let goBack = new TWEEN.Tween(this).to({angle:-angle}, 200);
+    let goBack = new TWEEN.Tween(this.ballCont).to({angle:-angle}, 200);
 
     animation.chain(goBack);
     goBack.chain(animation);

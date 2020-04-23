@@ -93,7 +93,7 @@ export class Game extends Base {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, regular, regular, regular, regular];
-    this.forcedBallTypes = [contractionBall, expansionBall, superBomb];
+    this.forcedBallTypes = [colorWave];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
 
@@ -452,6 +452,7 @@ export class Game extends Base {
       for (let row of this.field) {
         for (let cell of row) {
           if (cell.ball && cell.ball.colorIdx === colorIdx && !cell.ball.isVanishing) {
+            cell.ball.removeFromScene();
             cell.setBall(new ColorWave(cell.x, cell.y, this.cellWidth, this.cellHeight, colorIdx, color, this));
             cell.ball.appear(counter*50, () => {cell.ball.dribble()});
             counter++;

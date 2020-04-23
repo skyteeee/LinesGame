@@ -11,6 +11,7 @@ export class Ball {
     this.px = 0;
     this.py = 0;
     this.game = game;
+    this.curentAnimations = [];
     this.x = x;
     this.y = y;
     this.scaleX = 0;
@@ -50,12 +51,14 @@ export class Ball {
 
   vanish (onComplete,delay = 0) {
     this.isVanishing = true;
+    this.ballCont.zIndex = 101;
     let rescale = new TWEEN.Tween(this.ballCont.scale).to({x: 5, y: 5}, 300).easing(TWEEN.Easing.Quadratic.In)
       .delay(delay).onComplete(() => {
+        this.ballCont.zIndex = 0;
         if (onComplete) {
           onComplete();
         }
-        this.game.cnt.game.removeChild(this.ballCont);
+        this.removeFromScene();
         }).start();
   }
 
@@ -65,13 +68,19 @@ export class Ball {
 
     this.ballCont.x = oldP.pX;
     this.ballCont.y = oldP.pY;
+    this.ballCont.zIndex = 100;
 
     let scaling = new TWEEN.Tween(this.ballCont.scale).to({x:1.5, y:1.5}, 250)
       .easing(TWEEN.Easing.Quadratic.Out)
       .chain(new TWEEN.Tween(this.ballCont.scale).to({x:1, y:1}, 250)
         .easing(TWEEN.Easing.Quadratic.In)).start();
     let animation = new TWEEN.Tween(this.ballCont).to({x:p.pX, y:p.pY}, 500).easing(TWEEN.Easing.Quadratic.InOut)
-      .onComplete(onComplete)
+      .onComplete(() => {
+        this.ballCont.zIndex = 0;
+        if (onComplete) {
+          onComplete();
+        }
+      })
       .start();
 
   }
@@ -108,7 +117,7 @@ export class Ball {
         this.ballCont.scale.set(obj.scaleX, obj.scaleY);
       });
 
-    this.selectedTween = new TWEEN.Tween(scale)
+    let selectedStart = new TWEEN.Tween(scale)
       .to({py: scale.py-this.game.cellHeight/4, scaleY: 1.05, scaleX: 0.95}, 500)
       .easing(TWEEN.Easing.Quadratic.Out)
       .onUpdate((obj) => {
@@ -118,11 +127,15 @@ export class Ball {
       .chain(goDown);
     goDown.chain(squeeze);
     squeeze.chain(unsqueeze);
-    unsqueeze.chain(this.selectedTween);
-    this.selectedTween.start();
+    unsqueeze.chain(selectedStart);
+    selectedStart.start();
+    this.curentAnimations.push(...[selectedStart, goDown, squeeze, unsqueeze])
   }
 
   deselect () {
+    for (let animation of this.curentAnimations) {
+      animation.stop();
+    }
     if (this.selectedTween) {
       if (Array.isArray(this.selectedTween)) {
         for (let animation of this.selectedTween) {
@@ -142,6 +155,10 @@ export class Ball {
     this.ballCont.x = pCoord.pX;
     this.ballCont.scale.set(1);
     this.ballCont.angle = 0;
+  }
+
+  removeFromScene () {
+    this.game.cnt.game.removeChild(this.ballCont);
   }
 
 }

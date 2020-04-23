@@ -124,6 +124,16 @@ export class Base {
       this.tex.allImg['bhalf_ball_violet.png'],
     ];
 
+    this.tex.colorWaveTex = [
+      this.tex.allImg['diamond_red.png'],
+      this.tex.allImg['diamond_orange.png'],
+      this.tex.allImg['diamond_yellow.png'],
+      this.tex.allImg['diamond_green.png'],
+      this.tex.allImg['diamond_lblue.png'],
+      this.tex.allImg['diamond_blue.png'],
+      this.tex.allImg['diamond_violet.png']
+    ]
+
   }
 
 }
