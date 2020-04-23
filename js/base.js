@@ -51,7 +51,7 @@ export class Base {
     this.cellWidth2 = this.cellWidth / 2;
 
     this.app = new PIXI.Application({width:this.width, height:this.height,
-      antialias:true, backgroundColor:0xe4e400, resolution: window.devicePixelRatio || 1});
+      antialias:true, backgroundColor:0xe4e4e4, resolution: window.devicePixelRatio || 1});
     div.appendChild(this.app.view);
     PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
 
@@ -77,7 +77,7 @@ export class Base {
     });
     this.cnt.background.addChild(graphics);
 
-    this.app.loader.add('img/images2.json').load(() => {this.setupResources()})
+    this.app.loader.add('img/images2.json').add('fonts/mainfont2.xml').load(() => {this.setupResources()})
   }
 
   onClick (x, y) {

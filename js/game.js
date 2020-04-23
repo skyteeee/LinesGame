@@ -13,6 +13,7 @@ import {superBomb, SuperBomb} from "./superBomb";
 import {rainbow, RainbowBall} from "./rainbowBall";
 import {X3Ball, x3Ball} from "./x3Ball";
 import {Base} from "./base";
+import {HUD} from "./HUD";
 
 export class Game extends Base {
   constructor() {
@@ -27,6 +28,7 @@ export class Game extends Base {
     this.drawOverAll = [];
     this.blockClick = false;
     this.colorWaveTimer = null;
+    this.HUD = null;
     this.possibleBallColors = [
       new Color(218, 0, 25),
       new Color(255, 91, 0),
@@ -137,6 +139,7 @@ export class Game extends Base {
   setupResources() {
     super.setupResources();
     this.generateBalls();
+    this.createHUD();
   }
 
   addColorOnLvlUp() {
@@ -146,6 +149,7 @@ export class Game extends Base {
       }
     }
   }
+
 
 
   levelUpIfNeeded() {
@@ -790,7 +794,12 @@ export class Game extends Base {
 
 
   scoreAnimation() {
-    let animation = new TWEEN.Tween(this).to({score:this.score+this.earnedScore}, 1000).easing(TWEEN.Easing.Quadratic.Out).start();
+    let animation = new TWEEN.Tween(this).to({score:this.score+this.earnedScore}, 1000)
+      .onUpdate(() => {this.HUD.update()}).easing(TWEEN.Easing.Quadratic.Out).start();
+  }
+
+  createHUD () {
+    this.HUD = new HUD(this);
   }
 
   drawHUD () {
