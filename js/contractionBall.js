@@ -16,7 +16,7 @@ export class ContractionBall extends RegularBall {
 
   reinit() {
     super.reinit();
-    this.overlaySprite.scale.set(this.cellWidth / (this.sprite.width / this.sprite.scale.x) * Ball.defaultScaleMultiplier / 1.75);
+    this.overlaySprite.scale.set(this.cellWidth / (this.overlaySprite.width / this.overlaySprite.scale.x) * Ball.defaultScaleMultiplier / 1.75);
   }
 
   drawBall() {

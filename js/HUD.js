@@ -39,16 +39,14 @@ export class HUD {
 
   update() {
     let offsetX = this.game.hudHeight * 0.2;
+    this.scoreText.text = `Score: ${Math.floor(this.game.score)}`;
+    this.lvlUpText.text = `Lvl up: +${Math.floor(this.game.scoreToLevelUp - this.game.score)}`;
+    this.lvlUpText.x = this.game.width - offsetX - this.lvlUpText.textWidth;
     if (this.game.isColorWaveModeOn) {
       this.colorWaveText.text = `${Math.floor(this.animationTime / 100) / 10}`;
     } else {
-      this.scoreText.text = `Score: ${Math.floor(this.game.score)}`;
-
       this.lvlText.text = `Level: ${this.game.level}`;
       this.lvlText.x = this.game.width / 2 - this.lvlText.textWidth / 2;
-
-      this.lvlUpText.text = `Lvl up: +${Math.floor(this.game.scoreToLevelUp - this.game.score)}`;
-      this.lvlUpText.x = this.game.width - offsetX - this.lvlUpText.textWidth;
     }
   }
 
@@ -64,6 +62,11 @@ export class HUD {
       .onComplete(onComplete).onUpdate(onUpdate).start();
     let yoAnim = new TWEEN.Tween(this.colorWaveText.scale).to({x: 2, y: 2}, 500)
       .repeat(8).yoyo(true).start();
+  }
+
+  scoreAnimation(duration = 1000) {
+    let animation = new TWEEN.Tween(this.game).to({score:this.game.score+this.game.earnedScore}, duration)
+      .onUpdate(() => {this.update()}).start();
   }
 
   turnOnColorWaveTimer(colorIdx) {

@@ -72,7 +72,7 @@ export class Game extends Base {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, doubleBall, regular, regular, regular, regular];
-    this.forcedBallTypes = [contractionBall];
+    this.forcedBallTypes = [colorWave];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
 
@@ -130,6 +130,7 @@ export class Game extends Base {
       this.addColorOnLvlUp();
       this.expandOnLvlUp();
       this.contractOnLvlUp();
+      this.levelUpIfNeeded();
     }
   }
 
@@ -232,13 +233,17 @@ export class Game extends Base {
 
       if (state) {
         this.removeBalls(ballsToRemove);
-        let pixel = xy2screen(x, y, this);
-        let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY, this);
-        floating.animate(this);
-        this.scoreAnimation(ballsToRemove.length*300-ballsToRemove.length*110);
+        this.animateScoreOnRemove(x, y, ballsToRemove.length);
       }
       return state;
     }
+  }
+
+  animateScoreOnRemove(x, y, ballAmount) {
+    let pixel = xy2screen(x, y, this);
+    let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY, this);
+    floating.animate(this);
+    this.HUD.scoreAnimation(ballAmount*190);
   }
 
   prepareNextMove(x, y, cell) {
@@ -259,6 +264,7 @@ export class Game extends Base {
         }
       }
       this.initGame();
+      this.createFieldGraphics(this.graphics);
       this.generateBalls();
       this.gameOver.hide();
     }
@@ -284,8 +290,8 @@ export class Game extends Base {
 
     let cell = this.field[cellY][cellX];
     if (cell.ball && cell.ball.getType() === colorWave && cell.ball.colorIdx === this.colorWaveIdx) {
-      this.changeScore(this.multiplier, cell.ball.getScore());
       this.removeBalls([cell]);
+      this.animateScoreOnRemove(cellX, cellY, 1);
     }
   }
 
@@ -355,6 +361,7 @@ export class Game extends Base {
 
   turnOnGameOver() {
     this.isGameOver = true;
+    this.score = Math.floor(this.score);
     this.gameOver.show();
   }
 
@@ -580,7 +587,7 @@ export class Game extends Base {
     }
   }
 
-  superBombRemoveBalls () {
+  superBombRemoveBalls (x, y) {
     this.setBlock();
     this.earnedScore = -Math.floor(this.score*0.25);
     let balls = [];
@@ -595,12 +602,12 @@ export class Game extends Base {
         }
       }
     }
-    this.scoreAnimation(balls.length*125);
     this.removeBalls(balls, (cell, isLast) => {
       if (isLast) {
         this.generateBalls();
       }
     });
+    this.animateScoreOnRemove(x, y, balls.length);
   }
 
   vanishCallBack(cell, isLast) {
@@ -612,7 +619,7 @@ export class Game extends Base {
         this.contractRemoveBalls()
       }
       if (cell.ball instanceof SuperBomb) {
-        this.superBombRemoveBalls();
+        this.superBombRemoveBalls(cell.ball.x, cell.ball.y);
       }
       if (cell.ball instanceof ColorWave) {
         this.colorWaveMode(cell.ball.colorIdx);
@@ -801,10 +808,7 @@ export class Game extends Base {
     return {inARow:inARow, colorSet:colorSet};
   }
 
-  scoreAnimation(duration = 1000) {
-    let animation = new TWEEN.Tween(this).to({score:this.score+this.earnedScore}, duration)
-      .onUpdate(() => {this.HUD.update()}).start();
-  }
+
 
   createHUD () {
     this.HUD = new HUD(this);
