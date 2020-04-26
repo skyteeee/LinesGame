@@ -22,57 +22,6 @@ export class ColorWave extends Ball {
     return 100;
   }
 
-  drawBall() {
-    super.drawBall();
-    let radius = Math.floor(this.cellHeight*0.3125);
-    let halfSide = radius/2.5;
-
-    this.game.ctx.beginPath();
-    this.game.ctx.moveTo(radius, halfSide);
-    this.game.ctx.lineTo(radius, -halfSide);
-    this.game.ctx.lineTo(halfSide, -radius);
-    this.game.ctx.lineTo(-halfSide, -radius);
-    this.game.ctx.lineTo(-radius, -halfSide);
-    this.game.ctx.lineTo(-radius, halfSide);
-    this.game.ctx.lineTo(-halfSide, radius);
-    this.game.ctx.lineTo(halfSide, radius);
-    this.game.ctx.closePath();
-
-    let color = this.color.iRequestNormalColor();
-    let darker = this.color.darkenColor(0.8);
-    let lighter = this.color.lightenColor(0.5);
-    let outerGradient = this.game.ctx.createLinearGradient(-radius, -radius, radius, radius);
-    outerGradient.addColorStop(0, lighter);
-    outerGradient.addColorStop(1, darker);
-
-    this.game.ctx.fillStyle = outerGradient;
-    this.game.ctx.fill();
-    this.game.ctx.strokeStyle = 'rgba(68,68,68,0.5)';
-    this.game.ctx.strokeWidth = 1;
-    this.game.ctx.stroke();
-
-    radius *= 0.7;
-    halfSide *= 0.7;
-
-    this.game.ctx.beginPath();
-    this.game.ctx.moveTo(radius, halfSide);
-    this.game.ctx.lineTo(radius, -halfSide);
-    this.game.ctx.lineTo(halfSide, -radius);
-    this.game.ctx.lineTo(-halfSide, -radius);
-    this.game.ctx.lineTo(-radius, -halfSide);
-    this.game.ctx.lineTo(-radius, halfSide);
-    this.game.ctx.lineTo(-halfSide, radius);
-    this.game.ctx.lineTo(halfSide, radius);
-    this.game.ctx.closePath();
-
-    let innerGradient = this.game.ctx.createLinearGradient(radius, radius, -radius, -radius);
-    innerGradient.addColorStop(0, lighter);
-    innerGradient.addColorStop(1, darker);
-
-    this.game.ctx.fillStyle = innerGradient;
-    this.game.ctx.fill();
-  }
-
   selected() {
     let rotation = new TWEEN.Tween(this.ballCont).to({angle:360}, 3000).repeat(Infinity).start();
     let scaling = new TWEEN.Tween(this.ballCont.scale).to({y:0.75, x:0.75}, 500).repeat(Infinity)

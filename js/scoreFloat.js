@@ -21,17 +21,4 @@ export class ScoreFloat {
       .easing(TWEEN.Easing.Quadratic.In)
       .onComplete(()=>{this.game.cnt.game.removeChild(this.text)}).start();
   }
-
-  draw () {
-    this.game.ctx.save();
-    this.game.ctx.translate(this.px, this.py);
-    this.game.ctx.fillStyle = `rgba(14,109,0, ${this.opacity})`;
-    this.game.ctx.strokeStyle = `rgba(255,255,255, ${this.opacity})`;
-    this.game.ctx.strokeWidth = 1;
-    this.game.ctx.font = 'bold 32px MainFont';
-    this.game.ctx.textAlign = 'center';
-    this.game.ctx.fillText(`${this.score}`, 0, 0);
-    this.game.ctx.strokeText(`${this.score}`, 0, 0);
-    this.game.ctx.restore();
-  }
 }

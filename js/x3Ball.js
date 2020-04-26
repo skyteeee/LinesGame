@@ -24,12 +24,6 @@ export class X3Ball extends RegularBall {
     return x3Ball;
   }
 
-  drawBall() {
-    super.drawBall();
-    let radius = Math.floor(this.cellHeight * 0.3125);
-
-  }
-
   vanish(onComplete, delay = 0) {
     super.vanish(onComplete, delay);
     let textVanish = new TWEEN.Tween(this).to({opacity:0}, 300).easing(TWEEN.Easing.Quadratic.In)

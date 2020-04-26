@@ -72,7 +72,7 @@ export class Game extends Base {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, doubleBall, regular, regular, regular, regular];
-    this.forcedBallTypes = [colorWave];
+    this.forcedBallTypes = [contractionBall];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
 
@@ -120,8 +120,6 @@ export class Game extends Base {
     }
   }
 
-
-
   levelUpIfNeeded() {
     if (this.score + this.earnedScore >= this.scoreToLevelUp) {
       this.level++;
@@ -158,20 +156,6 @@ export class Game extends Base {
       }
     }
     return false;
-  }
-
-  addOverallObject(object) {
-    this.drawOverAll.push(object);
-  }
-
-  removeOverallObject(object) {
-    for (let idx in this.drawOverAll) {
-      if (object === this.drawOverAll[idx]) {
-        this.drawOverAll.splice(idx, 1);
-        break;
-      }
-    }
-
   }
 
   checkForWholeLine (state1, state2, ballsToRemove, selectedCell) {
@@ -456,7 +440,8 @@ export class Game extends Base {
     this.cnt.field.y = delta+this.hudHeight;
     let animation = new TWEEN.Tween(this.cnt.field.scale).to({x:1, y:1}, 1000).easing(TWEEN.Easing.Back.Out)
       .onComplete(() => {this.removeBlock()}).start();
-    let animation2 = new TWEEN.Tween(this.cnt.field).to({x:0, y:this.hudHeight}, 1000).easing(TWEEN.Easing.Back.Out)
+    let animation2 = new TWEEN.Tween(this.cnt.field).to({x:0, y:this.hudHeight}, 1000)
+      .easing(TWEEN.Easing.Back.Out).onComplete(() => {this.findEmptyCells()})
       .start();
   }
 
@@ -476,7 +461,7 @@ export class Game extends Base {
           if (cell.ball && cell.ball.colorIdx === colorIdx && !cell.ball.isVanishing) {
             cell.ball.removeFromScene();
             cell.setBall(new ColorWave(cell.x, cell.y, this.cellWidth, this.cellHeight, colorIdx, color, this));
-            cell.ball.appear(counter*50, () => {cell.ball.dribble()});
+            cell.ball.appear(counter*50, () => {if (cell.ball) {cell.ball.dribble()}});
             counter++;
           }
         }
@@ -506,7 +491,6 @@ export class Game extends Base {
   }
 
   turnOffColorWaveMode (colorIdx) {
-    this.removeOverallObject(this.colorWaveTimer);
     this.HUD.turnOffColorWaveTimer();
     this.colorWaveTimer = null;
     this.colorWaveIdx = null;
@@ -808,23 +792,7 @@ export class Game extends Base {
     return {inARow:inARow, colorSet:colorSet};
   }
 
-
-
   createHUD () {
     this.HUD = new HUD(this);
   }
-
-  drawGameOver () {
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-    let fontHeight = this.gameHeight*0.098;
-    this.ctx.fillRect(0, 0, this.width, this.gameHeight);
-    this.ctx.font = `bold ${fontHeight}px MainFont`;
-    this.ctx.fillStyle = 'rgb(180,0,46)';
-    this.ctx.strokeStyle = 'rgb(255, 255, 255)';
-    this.ctx.strokeWidth = 3;
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('GAME OVER', this.width/2, this.height/2);
-    this.ctx.strokeText('GAME OVER', this.width/2, this.height/2);
-  }
-
 }

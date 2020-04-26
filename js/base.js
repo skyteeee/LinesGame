@@ -53,8 +53,7 @@ export class Base {
     this.cellWidth2 = this.cellWidth / 2;
 
     this.app = new PIXI.Application({width:this.width, height:this.height,
-      antialias:true, backgroundColor:0xe4e4e4, resolution: window.devicePixelRatio || 1});
-    div.appendChild(this.app.view);
+      antialias:true, backgroundColor:0xeaeae4, resolution: window.devicePixelRatio || 1});
     PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
 
     this.cnt.HUD = new PIXI.Container();
@@ -80,7 +79,9 @@ export class Base {
     });
     this.cnt.background.addChild(this.graphics);
 
-    this.app.loader.add('img/images2.json').add('fonts/mainfont2.xml').load(() => {this.setupResources()})
+    this.app.loader.add('img/images2.json')
+      .add('fonts/mainfont2.xml')
+      .load(() => {this.setupResources()});
   }
 
   onClick (x, y) {
@@ -88,6 +89,8 @@ export class Base {
   }
 
   setupResources () {
+    let div = document.getElementById('fieldHolder');
+    div.appendChild(this.app.view);
     this.tex = {allImg:this.app.loader.resources['img/images2.json'].textures};
     this.tex.ballImg = [
     this.tex.allImg['ball_red.png'],
