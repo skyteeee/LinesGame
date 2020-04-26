@@ -20,6 +20,11 @@ export class SuperBomb extends Ball {
     }
   }
 
+  reinit() {
+    super.reinit();
+    this.sprite.scale.set(this.cellWidth / (this.sprite.width / this.sprite.scale.x) * Ball.defaultScaleMultiplier);
+  }
+
   drawBall() {
     let x = -this.game.cellWidth2;
     let y = -this.game.cellHeight2;

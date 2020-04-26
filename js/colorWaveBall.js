@@ -80,6 +80,11 @@ export class ColorWave extends Ball {
     this.selectedTween = [rotation, scaling];
   }
 
+  reinit() {
+    super.reinit();
+    this.sprite.scale.set(this.cellWidth / (this.sprite.width / this.sprite.scale.x) * Ball.defaultScaleMultiplier);
+  }
+
   vanish(onComplete, delay = 0) {
     this.isVanishing = true;
     if (this.dribbleTween) {

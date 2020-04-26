@@ -22,6 +22,12 @@ export class DoubleBall extends Ball{
     this.colors.add(colorIdx2);
   }
 
+  reinit() {
+    super.reinit();
+    this.topSprite.scale.set(this.cellWidth / (this.topSprite.width / this.topSprite.scale.x) * Ball.defaultScaleMultiplier);
+    this.bottomSprite.scale.set(this.cellWidth / (this.bottomSprite.width / this.bottomSprite.scale.x) * Ball.defaultScaleMultiplier);
+  }
+
   getScore() {
     return 10;
   }

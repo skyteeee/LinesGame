@@ -14,6 +14,11 @@ export class ExpansionBall extends RegularBall {
     this.ballCont.addChild(this.overlaySprite);
   }
 
+  reinit() {
+    super.reinit();
+    this.overlaySprite.scale.set(this.cellWidth / (this.sprite.width / this.sprite.scale.x) * Ball.defaultScaleMultiplier / 1.75);
+  }
+
   drawBall() {
     super.drawBall();
     let radius = Math.floor(this.cellWidth*0.3125);

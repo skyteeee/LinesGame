@@ -20,6 +20,11 @@ export class RegularBall extends Ball {
     return 5;
   }
 
+  reinit() {
+    super.reinit();
+    this.sprite.scale.set(this.cellWidth / (this.sprite.width / this.sprite.scale.x) * Ball.defaultScaleMultiplier);
+  }
+
   getType() {
     return regular;
   }

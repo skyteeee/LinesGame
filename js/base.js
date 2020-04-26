@@ -15,10 +15,12 @@ export class Base {
     this.cellWidth2 = 0;
   }
 
-  createFieldGraphics() {
+  createFieldGraphics(gfx) {
+    gfx.clear();
+
     let gameHeight = this.height-this.hudHeight;
-    let gfx = new PIXI.Graphics();
-    gfx.beginFill(0xe4e4e4);
+    console.log('vy ponyali: ', this.height, this.hudHeight, gameHeight);
+    gfx.beginFill(0xeaeae4);
     gfx.drawRect(0,0, this.width, gameHeight);
     gfx.endFill();
 
@@ -68,14 +70,15 @@ export class Base {
     this.cnt.game.sortableChildren = true;
     this.cnt.field.y = this.hudHeight;
 
-    let graphics = this.createFieldGraphics();
-    graphics.interactive = true;
-    graphics.on('pointerdown', (event) => {
-      let pressCoord = graphics.toLocal(event.data.global);
+    this.graphics = new PIXI.Graphics();
+    this.graphics = this.createFieldGraphics(this.graphics);
+    this.graphics.interactive = true;
+    this.graphics.on('pointerdown', (event) => {
+      let pressCoord = this.graphics.toLocal(event.data.global);
 
       this.onClick(pressCoord.x, pressCoord.y);
     });
-    this.cnt.background.addChild(graphics);
+    this.cnt.background.addChild(this.graphics);
 
     this.app.loader.add('img/images2.json').add('fonts/mainfont2.xml').load(() => {this.setupResources()})
   }

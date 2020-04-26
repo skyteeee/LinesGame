@@ -13,6 +13,7 @@ import {rainbow, RainbowBall} from "./rainbowBall";
 import {X3Ball, x3Ball} from "./x3Ball";
 import {Base} from "./base";
 import {HUD} from "./HUD";
+import {GameOver} from "./gameOver";
 
 export class Game extends Base {
   constructor() {
@@ -40,31 +41,8 @@ export class Game extends Base {
 
   }
 
-  resize () {
-    console.log('resizing');
-    this.gameHeight = this.canvas.offsetHeight;
-    this.width = this.canvas.offsetWidth;
-    this.hudHeight = this.gameHeight-this.width;
-    this.height = this.gameHeight - this.hudHeight;
-    this.cellHeight = this.height / this.fieldHeight;
-    this.cellWidth = this.width / this.fieldWidth;
-    this.cellHeight2 = this.cellHeight / 2;
-    this.cellWidth2 = this.cellWidth / 2;
-    this.canvas.width = this.width;
-    this.canvas.height = this.gameHeight;
-    for (let row of this.field) {
-      for (let cell of row) {
-        if (cell.ball) {
-          cell.ball.cellWidth = this.cellWidth;
-          cell.ball.cellHeight = this.cellHeight;
-        }
-      }
-    }
-  }
-
   refresh(time) {
     this.animate(time);
-    this.draw();
     if (this.decideToRefresh()) {
       requestAnimationFrame((time1 => this.refresh(time1)));
     }
@@ -94,12 +72,12 @@ export class Game extends Base {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, doubleBall, regular, regular, regular, regular];
-    this.forcedBallTypes = [colorWave];
+    this.forcedBallTypes = [contractionBall];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
 
     if (this.height) {
-      this.cellHeight = this.height / this.fieldHeight;
+      this.cellHeight = (this.height-this.hudHeight) / this.fieldHeight;
       this.cellWidth = this.width / this.fieldWidth;
       this.cellHeight2 = this.cellHeight / 2;
       this.cellWidth2 = this.cellWidth / 2;
@@ -124,21 +102,14 @@ export class Game extends Base {
 
   init() {
     this.initGame();
-    this.canvas = document.getElementById('field');
-    this.canvas.onclick = (event) => {this.onClick(event.offsetX, event.offsetY);};
-    this.ctx = this.canvas.getContext('2d');
     this.initEngine();
-    this.gameHeight = this.canvas.offsetHeight;
-    this.width = this.canvas.offsetWidth;
-    this.height = this.gameHeight - this.hudHeight;
-    this.canvas.width = this.width;
-    this.canvas.height = this.gameHeight;
   }
 
   setupResources() {
     super.setupResources();
     this.generateBalls();
     this.createHUD();
+    this.gameOver = new GameOver(this);
   }
 
   addColorOnLvlUp() {
@@ -280,9 +251,16 @@ export class Game extends Base {
 
   operateGameOver() {
     if (this.isGameOver) {
+      for (let row of this.field) {
+        for (let cell of row) {
+          if (cell.ball) {
+            cell.ball.removeFromScene();
+          }
+        }
+      }
       this.initGame();
       this.generateBalls();
-      this.draw();
+      this.gameOver.hide();
     }
   }
 
@@ -368,11 +346,16 @@ export class Game extends Base {
     }
 
     if (emptyCells.length === 0) {
-      this.isGameOver = true;
+      this.turnOnGameOver();
     }
 
     return emptyCells;
 
+  }
+
+  turnOnGameOver() {
+    this.isGameOver = true;
+    this.gameOver.show();
   }
 
   addBallToField (selectedCell) {
@@ -414,23 +397,33 @@ export class Game extends Base {
 
   expandAnimation () {
     let scaleFactor = this.fieldWidth/(this.fieldWidth+2);
+    let delta = (this.width-this.width*scaleFactor)/2;
     this.setBlock();
-    let animation = new TWEEN.Tween(this).to({scaleX:scaleFactor, scaleY:scaleFactor},1000)
+    let animation = new TWEEN.Tween(this.cnt.field.scale)
+      .to({x:scaleFactor, y:scaleFactor},1000)
       .easing(TWEEN.Easing.Back.In).onComplete(() => {this.expandField(); this.removeBlock()}).start();
+    let animation2 = new TWEEN.Tween(this.cnt.field)
+      .to({x:delta, y:delta+this.hudHeight},1000)
+      .easing(TWEEN.Easing.Back.In).onComplete(() => {
+        this.cnt.field.x = 0;
+        this.cnt.field.y = this.hudHeight;
+      }).start();
   }
 
   expandField() {
+    this.cnt.field.scale.set(1);
     this.scaleY = 1;
     this.scaleX = 1;
     this.oldField = this.field;
     this.fieldHeight += 2;
     this.fieldWidth += 2;
     this.field = [];
-    this.cellHeight = this.height / this.fieldHeight;
+    this.cellHeight = (this.height-this.hudHeight) / this.fieldHeight;
     this.cellWidth = this.width / this.fieldWidth;
     this.cellHeight2 = this.cellHeight / 2;
     this.cellWidth2 = this.cellWidth / 2;
     this.initField();
+    this.createFieldGraphics(this.graphics);
     for (let row of this.oldField) {
       for (let cell of row) {
         cell.x++;
@@ -441,6 +434,7 @@ export class Game extends Base {
           cell.ball.cellHeight = this.cellHeight;
           cell.ball.cellWidth = this.cellWidth;
           this.field[y][x].setBall(cell.ball);
+          cell.ball.reinit();
         }
       }
     }
@@ -448,11 +442,15 @@ export class Game extends Base {
 
   contractAnimation () {
     let scaleFactor = this.fieldWidth/(this.fieldWidth+2);
+    let delta = (this.width-this.width*scaleFactor)/2;
     this.setBlock();
-    this.scaleX = scaleFactor;
-    this.scaleY = scaleFactor;
-    let animation = new TWEEN.Tween(this).to({scaleX:1, scaleY:1}, 1000).easing(TWEEN.Easing.Back.Out)
+    this.cnt.field.scale.set(scaleFactor);
+    this.cnt.field.x = delta;
+    this.cnt.field.y = delta+this.hudHeight;
+    let animation = new TWEEN.Tween(this.cnt.field.scale).to({x:1, y:1}, 1000).easing(TWEEN.Easing.Back.Out)
       .onComplete(() => {this.removeBlock()}).start();
+    let animation2 = new TWEEN.Tween(this.cnt.field).to({x:0, y:this.hudHeight}, 1000).easing(TWEEN.Easing.Back.Out)
+      .start();
   }
 
   contractOnLvlUp () {
@@ -551,17 +549,17 @@ export class Game extends Base {
 
   contractField () {
     if (this.fieldWidth > 6) {
-      this.scaleY = 1;
-      this.scaleX = 1;
+      this.cnt.field.scale.set(1);
       this.oldField = this.field;
       this.fieldHeight -= 2;
       this.fieldWidth -= 2;
       this.field = [];
-      this.cellHeight = this.height / this.fieldHeight;
+      this.cellHeight = (this.height-this.hudHeight) / this.fieldHeight;
       this.cellWidth = this.width / this.fieldWidth;
       this.cellHeight2 = this.cellHeight / 2;
       this.cellWidth2 = this.cellWidth / 2;
       this.initField();
+      this.createFieldGraphics(this.graphics);
       for (let idx = 1; idx < this.oldField.length - 1; idx++) {
         let row = this.oldField[idx];
         for (let cellIdx = 1; cellIdx < row.length - 1; cellIdx++) {
@@ -574,6 +572,7 @@ export class Game extends Base {
             cell.ball.cellHeight = this.cellHeight;
             cell.ball.cellWidth = this.cellWidth;
             this.field[y][x].setBall(cell.ball);
+            cell.ball.reinit();
           }
         }
       }
@@ -802,8 +801,6 @@ export class Game extends Base {
     return {inARow:inARow, colorSet:colorSet};
   }
 
-
-
   scoreAnimation(duration = 1000) {
     let animation = new TWEEN.Tween(this).to({score:this.score+this.earnedScore}, duration)
       .onUpdate(() => {this.HUD.update()}).start();
@@ -811,60 +808,6 @@ export class Game extends Base {
 
   createHUD () {
     this.HUD = new HUD(this);
-  }
-
-  drawHUD () {
-    let offsetY = this.hudHeight*0.36;
-    let offsetX = this.hudHeight*0.2;
-    let textHeight = this.hudHeight*0.44;
-    this.ctx.font = `bold ${textHeight}px MainFont`;
-    this.ctx.textBaseline = 'top';
-    this.ctx.textAlign = 'start';
-    this.ctx.fillStyle = 'rgb(98,98,98)';
-    this.ctx.fillText(`Score: ${Math.floor(this.score)}`, offsetX, offsetY);
-    this.ctx.textAlign = 'end';
-    this.ctx.fillText(`Lvl Up: ${Math.floor(this.scoreToLevelUp-this.score)}`, this.width - offsetX, offsetY);
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText(`Lvl: ${this.level}`, this.width/2, offsetY);
-  }
-
-
-  drawFieldContent () {
-    this.ctx.save();
-    this.ctx.translate(0, this.hudHeight);
-    if (this.scaleX<1) {
-      this.ctx.translate(this.width/2, this.gameHeight/2);
-      this.ctx.scale(this.scaleX, this.scaleY);
-      this.ctx.translate(-this.width/2, -this.gameHeight/2);
-    }
-    for (let y of this.field) {
-      for (let cell of y) {
-        cell.drawCell(this);
-      }
-    }
-    for (let y of this.field) {
-      for (let cell of y) {
-        cell.drawBall(this);
-      }
-    }
-    this.ctx.restore();
-  }
-
-  draw () {
-    this.ctx.clearRect(0, 0, this.width, this.gameHeight);
-    this.drawHUD();
-    this.drawFieldContent();
-    this.drawLast();
-    if (this.isGameOver) {
-      this.drawGameOver();
-    }
-  }
-
-  drawLast () {
-    for (let index in this.drawOverAll) {
-      let object = this.drawOverAll[index];
-      object.draw();
-    }
   }
 
   drawGameOver () {

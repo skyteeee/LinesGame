@@ -19,6 +19,11 @@ export class RainbowBall extends Ball {
     }
   }
 
+  reinit() {
+    super.reinit();
+    this.sprite.scale.set(this.cellWidth / (this.sprite.width / this.sprite.scale.x) * Ball.defaultScaleMultiplier);
+  }
+
   getScore() {
     return 25;
   }

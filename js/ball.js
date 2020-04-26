@@ -43,10 +43,10 @@ export class Ball {
     return 'ball';
   }
 
-  drawBall () {
-    this.game.ctx.translate (this.px, this.py);
-    this.game.ctx.scale(this.scaleX, this.scaleY);
-    this.game.ctx.rotate(this.angle);
+  reinit () {
+    let p = xy2screen(this.x, this.y, this);
+    this.ballCont.x = p.pX;
+    this.ballCont.y = p.pY;
   }
 
   vanish (onComplete,delay = 0) {
