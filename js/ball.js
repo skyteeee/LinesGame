@@ -136,6 +136,7 @@ export class Ball {
     for (let animation of this.curentAnimations) {
       animation.stop();
     }
+    this.curentAnimations = [];
     if (this.selectedTween) {
       if (Array.isArray(this.selectedTween)) {
         for (let animation of this.selectedTween) {

@@ -19,7 +19,7 @@ export class ColorWave extends Ball {
     return colorWave;
   }
   getScore() {
-    return 100;
+    return 25;
   }
 
   selected() {
@@ -43,7 +43,12 @@ export class ColorWave extends Ball {
     let rescale = new TWEEN.Tween(this.ballCont.scale).to({x:0, y:0}, 300).easing(TWEEN.Easing.Quadratic.In)
       .delay(delay).start();
     let rotation = new TWEEN.Tween(this.ballCont).to({angle:360}, 300).easing(TWEEN.Easing.Quadratic.In)
-      .delay(delay).onComplete(onComplete).start();
+      .delay(delay).onComplete(() => {
+        if (onComplete) {
+          onComplete();
+        }
+        this.removeFromScene();
+      }).start();
   }
 
   dribble () {

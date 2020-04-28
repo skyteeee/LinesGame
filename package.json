@@ -17,7 +17,7 @@
   },
   "scripts": {
     "build-js": "browserify -d ./js/main.js -o ./public/js/bundle.js",
-    "prepare": "copyfiles index.html public/ & copyfiles css/lines.css public/css/ & copyfiles img/images* public/img/ & copyfiles fonts/* public/fonts/",
+    "prepare": "copyfiles index.html public/ & copyfiles css/lines.css public/ & copyfiles img/images* public/ & copyfiles fonts/* public/",
     "build": "yarn prepare & browserify ./js/main.js | terser -c -m -o ./public/js/bundle.js",
     "watch": "watchify ./js/main.js -o ./public/js/bundle.js -v -d"
   },

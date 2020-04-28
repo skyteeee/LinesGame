@@ -72,7 +72,7 @@ export class Game extends Base {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, doubleBall, regular, regular, regular, regular];
-    this.forcedBallTypes = [contractionBall];
+    this.forcedBallTypes = [contractionBall, contractionBall, contractionBall];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
 
@@ -271,7 +271,6 @@ export class Game extends Base {
     if (this.checkForBlockedCell(cellX, cellY)){
       return;
     }
-
     let cell = this.field[cellY][cellX];
     if (cell.ball && cell.ball.getType() === colorWave && cell.ball.colorIdx === this.colorWaveIdx) {
       this.removeBalls([cell]);
@@ -517,9 +516,11 @@ export class Game extends Base {
       let cell1 = row1[xidx];
       let cell2 = row2[xidx];
       if (cell1.ball) {
+        cell1.ball.setDisabled(true);
         balls.push(cell1);
       }
       if (cell2.ball) {
+        cell2.ball.setDisabled(true);
         balls.push(cell2);
       }
     }
@@ -719,7 +720,7 @@ export class Game extends Base {
       }
       case rainbow: {
         this.removeBallType(rainbow);
-        return new RainbowBall(x, y, this.cellHeight, this.cellWidth, this.possibleBallColors,this);
+        return new RainbowBall(x, y, this.cellHeight, this.cellWidth, this);
       }
       case doubleBall: {
         let colorIdx1 = this.getRandomColorIdx();
@@ -743,7 +744,7 @@ export class Game extends Base {
       }
       case superBomb: {
         this.removeBallType(superBomb);
-        return new SuperBomb(x, y, this.cellWidth, this.cellHeight, this.possibleBallColors, this);
+        return new SuperBomb(x, y, this.cellWidth, this.cellHeight, this);
       }
       case colorWave: {
         this.removeBallType(colorWave);
