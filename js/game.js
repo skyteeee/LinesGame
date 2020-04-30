@@ -28,7 +28,10 @@ export class Game extends Base {
     this.drawOverAll = [];
     this.blockClick = false;
     this.colorWaveTimer = null;
+    this.lastClickTime = 0;
     this.HUD = null;
+    this.bonusQueue = [];
+    this.currentBonus = null;
     this.possibleBallColors = [
       new Color(218, 0, 25),
       new Color(255, 91, 0),
@@ -59,8 +62,8 @@ export class Game extends Base {
   initGame() {
     this.ballsPerTime = 3;
     this.inARowToVanish = 5;
-    this.fieldHeight = 8;
-    this.fieldWidth = 8;
+    this.fieldHeight = 10;
+    this.fieldWidth = 10;
     this.score = 0;
     this.earnedScore = 0;
     this.multiplier = 1;
@@ -72,7 +75,7 @@ export class Game extends Base {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, doubleBall, regular, regular, regular, regular];
-    this.forcedBallTypes = [contractionBall, contractionBall, contractionBall];
+    this.forcedBallTypes = [];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
 
@@ -255,12 +258,15 @@ export class Game extends Base {
   }
 
   onClick(x, y) {
-    console.log('Touch coords are ', x, y, 'cell w/h: ', this.cellWidth, '/', this.cellHeight);
-    if (!this.blockClick) {
-      if (!this.isColorWaveModeOn) {
-        this.regularClick(x, y);
-      } else {
-        this.colorWaveClick(x, y);
+    let currentClickTime = performance.now();
+    if (currentClickTime - this.lastClickTime > 75) {
+      this.lastClickTime = currentClickTime;
+      if (!this.blockClick) {
+        if (!this.isColorWaveModeOn) {
+          this.regularClick(x, y);
+        } else {
+          this.colorWaveClick(x, y);
+        }
       }
     }
   }
@@ -428,20 +434,32 @@ export class Game extends Base {
         }
       }
     }
+    this.currentBonus = null;
+    this.doBonus();
   }
 
   contractAnimation () {
-    let scaleFactor = this.fieldWidth/(this.fieldWidth+2);
-    let delta = (this.width-this.width*scaleFactor)/2;
+    let scaleFactor = this.fieldWidth / (this.fieldWidth + 2);
+    let delta = (this.width - this.width * scaleFactor) / 2;
     this.setBlock();
     this.cnt.field.scale.set(scaleFactor);
     this.cnt.field.x = delta;
-    this.cnt.field.y = delta+this.hudHeight;
-    let animation = new TWEEN.Tween(this.cnt.field.scale).to({x:1, y:1}, 1000).easing(TWEEN.Easing.Back.Out)
-      .onComplete(() => {this.removeBlock()}).start();
-    let animation2 = new TWEEN.Tween(this.cnt.field).to({x:0, y:this.hudHeight}, 1000)
-      .easing(TWEEN.Easing.Back.Out).onComplete(() => {this.findEmptyCells()})
+    this.cnt.field.y = delta + this.hudHeight;
+    let animation = new TWEEN.Tween(this.cnt.field.scale).to({x: 1, y: 1}, 1000)
+      .easing(TWEEN.Easing.Back.Out).start();
+    let animation2 = new TWEEN.Tween(this.cnt.field).to({x: 0, y: this.hudHeight}, 1000)
+      .easing(TWEEN.Easing.Back.Out).onComplete(() => {
+        this.finishContraction();
+      })
       .start();
+  }
+
+  finishContraction() {
+    this.removeBlock();
+    this.findEmptyCells();
+    this.currentBonus = null;
+    console.log('cleared current bonus');
+    this.doBonus();
   }
 
   contractOnLvlUp () {
@@ -466,6 +484,8 @@ export class Game extends Base {
         }
       }
       if (counter === 0) {
+        this.currentBonus = null;
+        this.doBonus();
         return;
       }
       this.HUD.turnOnColorWaveTimer(colorIdx);
@@ -505,6 +525,8 @@ export class Game extends Base {
         }
       }
     }
+    this.currentBonus = null;
+    this.doBonus();
   }
 
   contractRemoveBalls () {
@@ -536,7 +558,15 @@ export class Game extends Base {
         balls.push(cell2);
       }
     }
-    this.removeBalls(balls, (_cell,isLast) => {if (isLast){this.contractField(); this.removeBlock()}});
+    if (balls.length > 0) {
+      this.removeBalls(balls, (_cell, isLast) => {
+        if (isLast) {
+          this.contractField();
+        }
+      });
+    } else {
+      this.contractField();
+    }
   }
 
   contractField () {
@@ -569,6 +599,8 @@ export class Game extends Base {
         }
       }
       this.contractAnimation();
+    } else {
+      this.finishContraction();
     }
   }
 
@@ -589,32 +621,70 @@ export class Game extends Base {
     }
     this.removeBalls(balls, (cell, isLast) => {
       if (isLast) {
+        this.currentBonus = null;
+        this.doBonus();
         this.generateBalls();
       }
     });
     this.animateScoreOnRemove(x, y, balls.length);
   }
 
+  addToBonusQueue(ball) {
+    this.bonusQueue.push(ball);
+    console.log('successfully added bonus to queue:', this.bonusQueue);
+  }
+
   vanishCallBack(cell, isLast) {
     if (cell.ball && !cell.ball.isDisabled) {
       if (cell.ball instanceof ExpansionBall) {
-        this.expandAnimation();
+        this.addToBonusQueue(cell.ball);
       }
       if (cell.ball instanceof ContractionBall) {
-        this.contractRemoveBalls()
+        this.addToBonusQueue(cell.ball);
       }
       if (cell.ball instanceof SuperBomb) {
-        this.superBombRemoveBalls(cell.ball.x, cell.ball.y);
+        this.addToBonusQueue(cell.ball);
       }
       if (cell.ball instanceof ColorWave) {
-        this.colorWaveMode(cell.ball.colorIdx);
+        if (!this.isColorWaveModeOn) {
+          this.addToBonusQueue(cell.ball);
+        } else {
+          this.colorWaveMode(cell.ball.colorIdx);
+        }
       }
     }
+    console.log ('[VCB]: ball type, isLast: ', cell.ball ? cell.ball.getType : null, isLast);
     cell.ball = null;
     cell.handleSelect(false);
     if (isLast) {
+      this.doBonus();
       this.levelUpIfNeeded();
       this.removeBlock();
+    }
+  }
+
+  doBonus () {
+    if (!this.isGameOver && !this.currentBonus && this.bonusQueue.length !== 0) {
+      let bonusBall = this.bonusQueue.shift();
+      this.currentBonus = bonusBall;
+      if (bonusBall instanceof ExpansionBall) {
+        console.log('I am starting expandAnimation. Queue is ', this.bonusQueue);
+        this.expandAnimation();
+      }
+      if (bonusBall instanceof ContractionBall) {
+        console.log('I am starting contractRemoveBalls. Queue is ', this.bonusQueue);
+        this.contractRemoveBalls();
+      }
+      if (bonusBall instanceof SuperBomb) {
+        console.log('I am starting superBombRemoveBalls. Queue is ', this.bonusQueue);
+        this.superBombRemoveBalls(bonusBall.x, bonusBall.y);
+      }
+      if (bonusBall instanceof ColorWave) {
+        console.log('I am starting colorWaveMode. Queue is ', this.bonusQueue);
+        this.colorWaveMode(bonusBall.colorIdx);
+      }
+    } else {
+      console.log('DoBonus skipped. Current bonus and queue are ', this.currentBonus, this.bonusQueue);
     }
   }
 
@@ -636,9 +706,9 @@ export class Game extends Base {
       if (cell.ball.getType() === x3Ball) {
         secondMultiplier *= 3;
       }
+      let isLast = parseInt(index) === cellArray.length-1;
       this.incrementRemovedBalls();
       cell.ball.vanish(() => {
-        let isLast = parseInt(index) === cellArray.length-1;
         this.removeBlockedCell(cell);
         if (onComplete) {
           cell.ball = null;
