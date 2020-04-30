@@ -630,7 +630,18 @@ export class Game extends Base {
   }
 
   addToBonusQueue(ball) {
-    this.bonusQueue.push(ball);
+    if (ball instanceof ExpansionBall) {
+      this.bonusQueue.push(ball);
+    }
+    if (ball instanceof ContractionBall) {
+      this.bonusQueue.splice(0, 0, ball);
+    }
+    if (ball instanceof SuperBomb) {
+      this.bonusQueue.push(ball);
+    }
+    if (ball instanceof ColorWave) {
+      this.bonusQueue.splice(0, 0, ball);
+    }
     console.log('successfully added bonus to queue:', this.bonusQueue);
   }
 
