@@ -1,6 +1,7 @@
 import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from 'pixi.js';
 import {xy2screen} from "./tools";
+import {GlowFilter} from '@pixi/filter-glow';
 
 
 export class Ball {
@@ -83,6 +84,18 @@ export class Ball {
       })
       .start();
 
+  }
+
+  glow (callback) {
+    let filter = new GlowFilter({innerStrength: 0, outerStrength: 0, distance: this.cellWidth*0.1});
+    this.ballCont.filters = [filter];
+    let fadeIn = new TWEEN.Tween(filter).to({innerStrength: this.cellWidth*0.03, outerStrength: this.cellWidth*0.125}, 300)
+      .yoyo(true).repeat(3).onComplete(() => {
+        this.ballCont.filters = [];
+        if (callback) {
+          callback();
+        }
+      }).start()
   }
 
   appear (delay= 0, callback) {

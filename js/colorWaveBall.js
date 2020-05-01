@@ -19,7 +19,7 @@ export class ColorWave extends Ball {
     return colorWave;
   }
   getScore() {
-    return 25;
+    return 15;
   }
 
   selected() {

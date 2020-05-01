@@ -194,7 +194,7 @@ export class Game extends Base {
     return state;
   }
 
-  checkAll(x, y, cell) {
+  checkAll(x, y, cell, isFromGenerateBalls = false) {
     if (cell.ball !== null) {
       this.earnedScore = 0;
       let state = false;
@@ -219,7 +219,7 @@ export class Game extends Base {
       state |= this.checkForWholeLine(state7, state8, ballsToRemove, selected);
 
       if (state) {
-        this.removeBalls(ballsToRemove);
+        this.removeBalls(ballsToRemove, null, isFromGenerateBalls);
         this.animateScoreOnRemove(x, y, ballsToRemove.length);
       }
       return state;
@@ -279,7 +279,7 @@ export class Game extends Base {
     }
     let cell = this.field[cellY][cellX];
     if (cell.ball && cell.ball.getType() === colorWave && cell.ball.colorIdx === this.colorWaveIdx) {
-      this.removeBalls([cell]);
+      this.removeBalls([cell], null, true);
       this.animateScoreOnRemove(cellX, cellY, 1);
     }
   }
@@ -361,8 +361,6 @@ export class Game extends Base {
         this.removeBlockedCell(selectedCell);
       });
       this.delay = this.delay + 100;
-    } else {
-      this.addBallToField(selectedCell);
     }
   }
 
@@ -375,10 +373,10 @@ export class Game extends Base {
     return emptyCells[idx];
   }
 
-  checkBalls(state) {
-    for (let cell of state) {
+  checkBalls(cellArray) {
+    for (let cell of cellArray) {
       if (cell !== null) {
-        this.checkAll(cell.x, cell.y, cell);
+        this.checkAll(cell.x, cell.y, cell, true);
       } else {
         alert('Error!!!');
       }
@@ -392,18 +390,29 @@ export class Game extends Base {
   }
 
   expandAnimation () {
-    let scaleFactor = this.fieldWidth/(this.fieldWidth+2);
-    let delta = (this.width-this.width*scaleFactor)/2;
-    this.setBlock();
-    let animation = new TWEEN.Tween(this.cnt.field.scale)
-      .to({x:scaleFactor, y:scaleFactor},1000)
-      .easing(TWEEN.Easing.Back.In).onComplete(() => {this.expandField(); this.removeBlock()}).start();
-    let animation2 = new TWEEN.Tween(this.cnt.field)
-      .to({x:delta, y:delta+this.hudHeight},1000)
-      .easing(TWEEN.Easing.Back.In).onComplete(() => {
-        this.cnt.field.x = 0;
-        this.cnt.field.y = this.hudHeight;
-      }).start();
+    if (this.fieldWidth < 12) {
+      console.log('Successfully entered expand animation. Field width is ', this.fieldWidth);
+      let scaleFactor = this.fieldWidth / (this.fieldWidth + 2);
+      let delta = (this.width - this.width * scaleFactor) / 2;
+      this.setBlock();
+      let animation = new TWEEN.Tween(this.cnt.field.scale)
+        .to({x: scaleFactor, y: scaleFactor}, 1000)
+        .easing(TWEEN.Easing.Back.In).onComplete(() => {
+          this.expandField();
+          this.removeBlock()
+        }).start();
+      let animation2 = new TWEEN.Tween(this.cnt.field)
+        .to({x: delta, y: delta + this.hudHeight}, 1000)
+        .easing(TWEEN.Easing.Back.In).onComplete(() => {
+          this.cnt.field.x = 0;
+          this.cnt.field.y = this.hudHeight;
+        }).start();
+    } else {
+      console.log("Couldn't enter expand animation. Field width is ", this.fieldWidth);
+      this.changeScore(this.multiplier, 100);
+      this.currentBonus = null;
+      this.doBonus();
+    }
   }
 
   expandField() {
@@ -703,11 +712,10 @@ export class Game extends Base {
     return array.length>=this.inARowToVanish;
   }
 
-  removeBalls (cellArray, onComplete) {
-    let delay = 0;
+  removeBalls (cellArray, onComplete, needGlow = false) {
     let score = 0;
     let secondMultiplier = 1;
-    if (cellArray.length >= this.inARowToVanish+1) {
+    if (cellArray.length >= this.inARowToVanish + 1) {
       this.possibleBallTypes.push(rainbow);
     }
     for (let index in cellArray) {
@@ -717,19 +725,33 @@ export class Game extends Base {
       if (cell.ball.getType() === x3Ball) {
         secondMultiplier *= 3;
       }
-      let isLast = parseInt(index) === cellArray.length-1;
+      let isLast = parseInt(index) === cellArray.length - 1;
       this.incrementRemovedBalls();
-      cell.ball.vanish(() => {
-        this.removeBlockedCell(cell);
-        if (onComplete) {
-          cell.ball = null;
-          cell.handleSelect(false);
-          onComplete(cell, isLast)
-        } else {
-          this.vanishCallBack(cell, isLast);
-        }
-      }, delay);
-      delay += 100;
+      if (needGlow) {
+        cell.ball.glow(() => {
+          cell.ball.vanish(() => {
+            this.removeBlockedCell(cell);
+            if (onComplete) {
+              cell.ball = null;
+              cell.handleSelect(false);
+              onComplete(cell, isLast)
+            } else {
+              this.vanishCallBack(cell, isLast);
+            }
+          }, index * 100);
+        });
+      } else {
+        cell.ball.vanish(() => {
+          this.removeBlockedCell(cell);
+          if (onComplete) {
+            cell.ball = null;
+            cell.handleSelect(false);
+            onComplete(cell, isLast)
+          } else {
+            this.vanishCallBack(cell, isLast);
+          }
+        }, index * 100);
+      }
     }
     this.changeScore(this.multiplier, score, secondMultiplier);
   }
@@ -837,6 +859,11 @@ export class Game extends Base {
         let colorIdx = this.getRandomColorIdx();
         let color = this.possibleBallColors[colorIdx];
         return new X3Ball(x, y, colorIdx, color, this.cellWidth, this.cellHeight, this);
+      }
+      default: {
+        let colorIdx = this.getRandomColorIdx();
+        let color = this.possibleBallColors[colorIdx];
+        return new RegularBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight, this);
       }
     }
   }
