@@ -7,6 +7,22 @@ import {GlowFilter} from '@pixi/filter-glow';
 export class Ball {
 
   static defaultScaleMultiplier = 0.625;
+  static outerGlowFilter = null;
+  static innerGlowFilter = null;
+
+  static initFilters (cellWidth) {
+    Ball.outerGlowFilter = new GlowFilter({
+      innerStrength: 0,
+      outerStrength:0,
+      distance: cellWidth*0.1,
+      color: 0xff0000
+    });
+    Ball.innerGlowFilter = new GlowFilter({
+      innerStrength: 0,
+      outerStrength: 0,
+      distance: cellWidth*0.075
+    });
+  }
 
   constructor(x, y, cellWidth, cellHeight, game) {
     this.px = 0;
@@ -37,7 +53,7 @@ export class Ball {
   }
 
   getScore () {
-    return 0;
+    return 5;
   }
 
   getType () {
@@ -48,6 +64,33 @@ export class Ball {
     let p = xy2screen(this.x, this.y, this);
     this.ballCont.x = p.pX;
     this.ballCont.y = p.pY;
+  }
+
+  superBombVanish (onComplete,delay = 0) {
+    this.isVanishing = true;
+    this.ballCont.zIndex = 101;
+    let xWay = this.cellWidth*0.05;
+    let randomDirection = Math.round(Math.random());
+    if (randomDirection === 1) {
+      xWay *= -1;
+    }
+    let originalP = {x: this.ballCont.x, y: this.ballCont.y};
+    let rescale = new TWEEN.Tween(this.ballCont.scale).to({x: 0, y: 0}, 300).easing(TWEEN.Easing.Quadratic.In)
+      .onComplete(() => {
+        this.ballCont.zIndex = 0;
+        if (onComplete) {
+          onComplete();
+        }
+        this.removeFromScene();
+      });
+    let shiver = new TWEEN.Tween(this.ballCont).to({x: originalP.x + xWay}, 50)
+      .onComplete(() => {
+        this.ballCont.x = originalP.x;
+        rescale.start();
+      })
+      .repeat(10).yoyo(true)
+      .delay(delay).repeatDelay(0).easing(TWEEN.Easing.Back.In).start();
+
   }
 
   vanish (onComplete,delay = 0) {
@@ -87,15 +130,18 @@ export class Ball {
   }
 
   glow (callback) {
-    let filter = new GlowFilter({innerStrength: 0, outerStrength: 0, distance: this.cellWidth*0.1});
-    this.ballCont.filters = [filter];
-    let fadeIn = new TWEEN.Tween(filter).to({innerStrength: this.cellWidth*0.03, outerStrength: this.cellWidth*0.125}, 300)
+    this.ballCont.filters = [Ball.innerGlowFilter, Ball.outerGlowFilter];
+    let fadeIn = new TWEEN.Tween(Ball.innerGlowFilter).to({innerStrength: this.cellWidth*0.0075, outerStrength: this.cellWidth*0.075}, 300)
       .yoyo(true).repeat(3).onComplete(() => {
         this.ballCont.filters = [];
         if (callback) {
           callback();
         }
-      }).start()
+      }).start();
+    let outerGlow = new TWEEN.Tween(Ball.outerGlowFilter).to({outerStrength: this.cellWidth*0.025}, 300)
+      .yoyo(true).repeat(3).onComplete(() => {
+        this.ballCont.filters = [];
+      }).start();
   }
 
   appear (delay= 0, callback) {
@@ -173,6 +219,10 @@ export class Ball {
 
   removeFromScene () {
     this.game.cnt.game.removeChild(this.ballCont);
+    if (this.y < this.game.fieldHeight && this.x < this.game.fieldWidth
+      && this.game.field[this.y][this.x].ball === this) {
+      this.game.field[this.y][this.x].ball = null;
+    }
   }
 
 }

@@ -19,7 +19,7 @@ export class ColorWave extends Ball {
     return colorWave;
   }
   getScore() {
-    return 15;
+    return 10;
   }
 
   selected() {
@@ -64,6 +64,14 @@ export class ColorWave extends Ball {
     animation.start();
 
     this.dribbleTween = animation;
+  }
+
+  removeFromScene() {
+    super.removeFromScene();
+    if (this.dribbleTween) {
+      this.dribbleTween.stop();
+      this.dribbleTween = null;
+    }
   }
 
 }

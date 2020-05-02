@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-
+import {Ball} from "./ball";
 
 export class Base {
   constructor() {
@@ -82,6 +82,7 @@ export class Base {
     this.app.loader.add('img/images2.json')
       .add('fonts/mainfont2.xml')
       .load(() => {this.setupResources()});
+    Ball.initFilters(this.cellWidth);
   }
 
   onClick (x, y) {
