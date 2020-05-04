@@ -25,13 +25,14 @@ export class Game extends Base {
     this.scaleX = 1;
     this.scaleY = 1;
     this.blockedCells = [];
-    this.drawOverAll = [];
+    this.animateObjects = [];
     this.blockClick = false;
     this.colorWaveTimer = null;
     this.lastClickTime = 0;
     this.HUD = null;
     this.bonusQueue = [];
-    this.currentBonus = null;
+    this.lastTime = null;
+      this.currentBonus = null;
     this.possibleBallColors = [
       new Color(218, 0, 25),
       new Color(255, 91, 0),
@@ -52,7 +53,29 @@ export class Game extends Base {
   }
 
   animate(time) {
+    if (this.lastTime === null) {
+      this.lastTime = time;
+    }
+    let elapsed = (time - this.lastTime) * 0.001;
+    this.lastTime = time;
     TWEEN.update(time);
+    for (let object of this.animateObjects) {
+      object.update(elapsed);
+    }
+  }
+
+  addAnimatedObject(object) {
+    this.animateObjects.push(object);
+  }
+
+  removeAnimatedObject(object) {
+    for (let index in this.animateObjects) {
+      let element = this.animateObjects[index];
+      if (element === object) {
+        this.animateObjects.splice(index, 1);
+        break;
+      }
+    }
   }
 
   decideToRefresh() {
@@ -194,7 +217,7 @@ export class Game extends Base {
     return state;
   }
 
-  checkAll(x, y, cell, animationType = 'normal') {
+  checkAll(x, y, cell, animationType = 'glow') {
     if (cell.ball !== null) {
       this.earnedScore = 0;
       let state = false;
@@ -228,9 +251,9 @@ export class Game extends Base {
 
   animateScoreOnRemove(x, y, ballAmount) {
     let pixel = xy2screen(x, y, this);
-    let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY, this);
+    let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY + this.hudHeight, this);
     floating.animate(this);
-    this.HUD.scoreAnimation(ballAmount*25);
+    this.HUD.scoreAnimation(ballAmount*50);
   }
 
   prepareNextMove(x, y, cell) {
@@ -370,7 +393,7 @@ export class Game extends Base {
       return null;
     }
     idx = Math.floor(Math.random() * emptyCells.length);
-    return emptyCells[idx];
+    return emptyCells.splice(idx, 1).pop();
   }
 
   checkBalls(cellArray) {
@@ -775,15 +798,15 @@ export class Game extends Base {
 
   generateBalls () {
     let state = [];
+    let empty = this.findEmptyCells();
     for (let idx = 0; idx < this.ballsPerTime; idx++) {
-      let element = this.initRandomCell(this.findEmptyCells());
+      let element = this.initRandomCell(empty);
       if (element !== null) {
         this.addBallToField(element);
         state.push(element);
         this.addBlockedCell(element);
       }
     }
-    let empty = this.findEmptyCells();
     if (empty.length === 0) {
       this.delay = 0;
       return false;
