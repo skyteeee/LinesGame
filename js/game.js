@@ -98,7 +98,8 @@ export class Game extends Base {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, doubleBall, regular, regular, regular, regular];
-    this.forcedBallTypes = [];
+    this.forcedBallTypes = [superBomb];
+    this.nextBalls = [];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
 
@@ -133,7 +134,7 @@ export class Game extends Base {
 
   setupResources() {
     super.setupResources();
-    this.generateBalls();
+    this.generateBalls(true);
     this.createHUD();
     this.gameOver = new GameOver(this);
   }
@@ -217,7 +218,7 @@ export class Game extends Base {
     return state;
   }
 
-  checkAll(x, y, cell, animationType = 'glow') {
+  checkAll(x, y, cell, animationType = 'normal') {
     if (cell.ball !== null) {
       this.earnedScore = 0;
       let state = false;
@@ -258,8 +259,10 @@ export class Game extends Base {
 
   prepareNextMove(x, y, cell) {
     if (!this.checkAll(x, y, cell)) {
-      if (this.generateBalls() !== true) {
+      if (this.generateBalls(true) !== true) {
         this.isGameOver = true;
+      } else {
+        this.generateBalls(false);
       }
     }
   }
@@ -275,7 +278,7 @@ export class Game extends Base {
       }
       this.initGame();
       this.createFieldGraphics(this.graphics);
-      this.generateBalls();
+      this.generateBalls(true);
       this.gameOver.hide();
     }
   }
@@ -336,10 +339,10 @@ export class Game extends Base {
         cellPressed.ball.hoover(this.from.x, this.from.y, () => {
           this.removeBlockedCell(from);
           this.removeBlockedCell(cellPressed);
+          this.prepareNextMove(cellX, cellY, cellPressed);
         });
         this.from.ball = null;
         this.from = null;
-        this.prepareNextMove(cellX, cellY, cellPressed);
       }
     }
   }
@@ -377,8 +380,13 @@ export class Game extends Base {
     this.gameOver.show();
   }
 
-  addBallToField (selectedCell) {
-    selectedCell.ball = this.createBall(selectedCell.x, selectedCell.y);
+  addBallToField (selectedCell, ball = null) {
+    if (!ball) {
+      selectedCell.setBall(this.createBall(selectedCell.x, selectedCell.y));
+    } else {
+      selectedCell.setBall(ball);
+      ball.reset();
+    }
     if (selectedCell.ball) {
       selectedCell.ball.appear(this.delay, () => {
         this.removeBlockedCell(selectedCell);
@@ -652,7 +660,11 @@ export class Game extends Base {
       if (isLast) {
         this.currentBonus = null;
         this.doBonus();
-        this.generateBalls();
+        for (let ball of this.nextBalls) {
+          ball.hidePreview();
+        }
+        this.nextBalls = [];
+        this.generateBalls(true);
       }
     }, 'superBomb');
     this.animateScoreOnRemove(x, y, balls.length);
@@ -796,28 +808,72 @@ export class Game extends Base {
     }
   }
 
-  generateBalls () {
-    let state = [];
-    let empty = this.findEmptyCells();
+  createNewBallsArray (empty) {
+    let newBallsArray = [];
     for (let idx = 0; idx < this.ballsPerTime; idx++) {
       let element = this.initRandomCell(empty);
       if (element !== null) {
-        this.addBallToField(element);
-        state.push(element);
-        this.addBlockedCell(element);
+        let ball = this.createBall(element.x, element.y);
+        newBallsArray.push(ball);
       }
     }
-    if (empty.length === 0) {
-      this.delay = 0;
-      return false;
-    }
-    else {
-      if (empty.length <= 0.33*this.fieldHeight*this.fieldWidth && !this.checkForSuperBombs()) {
-        this.forcedBallTypes.push(superBomb);
+    return newBallsArray;
+  }
+
+  generateBalls (areBallsReal = true) {
+    let empty = this.findEmptyCells();
+    let newBalls = [];
+
+    if (areBallsReal) {
+      if (this.nextBalls.length === 0) {
+        newBalls = this.createNewBallsArray(empty);
+        for (let ball of newBalls) {
+          let element = this.field[ball.y][ball.x];
+          this.addBallToField(element, ball);
+          this.addBlockedCell(element);
+        }
+        //adding balls to field.
+
+      } else {
+        for (let ball of this.nextBalls) {
+          ball.hidePreview();
+          let cell = this.field[ball.y][ball.x];
+          if (cell.ball) {
+            cell = this.initRandomCell(empty);
+            if (cell === null) {
+              this.delay = 0;
+              return false;
+            }
+          }
+          this.addBallToField(cell, ball);
+          this.addBlockedCell(cell);
+        }
       }
-      this.checkBalls(state);
-      this.delay = 0;
-      return true;
+
+      if (empty.length === 0) {
+        this.delay = 0;
+        return false;
+      } else {
+
+        if (empty.length <= 0.33 * this.fieldHeight * this.fieldWidth && !this.checkForSuperBombs()) {
+          this.forcedBallTypes.push(superBomb);
+        }
+        let cells = [];
+        for (let ball of newBalls) {
+          let cell = this.field[ball.y][ball.x];
+          cells.push(cell);
+        }
+        this.checkBalls(cells);
+        this.delay = 0;
+        return true;
+      }
+    } else {
+
+      newBalls = this.createNewBallsArray(empty);
+      this.nextBalls = newBalls;
+      for (let ball of newBalls) {
+        ball.showPreview();
+      }
     }
   }
 

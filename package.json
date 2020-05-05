@@ -23,10 +23,10 @@
   },
   "dependencies": {
     "@babel/plugin-proposal-class-properties": "^7.8.3",
-    "@pixi/filter-glow": "^3.1.1",
     "@tweenjs/tween.js": "https://github.com/NorthernCaptain/tween.js.git",
+    "pixi-filters": "^3.1.1",
     "pixi-particles": "^4.2.1",
-    "pixi.js": "^5.2.1"
+    "pixi.js": "^5.2.4"
   },
   "browserify": {
     "debug": true,

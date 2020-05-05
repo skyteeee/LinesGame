@@ -80,12 +80,12 @@ export class ScoreFloat {
 
   animate () {
     this.game.addAnimatedObject(this.emitter);
-    let animation = new TWEEN.Tween(this.text).to({y: this.game.hudHeight * 0.5, x:this.game.cellWidth, alpha:0.5}, 1000)
+    let animation = new TWEEN.Tween(this.text).to({y: this.game.hudHeight * 0.5, x:this.game.cellWidth, alpha:0.5}, 500)
       .easing(TWEEN.Easing.Quadratic.In)
       .onComplete(()=>{this.game.app.stage.removeChild(this.text)}).start();
 
     let coords = {x: this.px, y: this.py};
-    let particleAnimation = new TWEEN.Tween(coords).to({y:this.game.hudHeight * 0.5, x:this.game.cellWidth}, 1000)
+    let particleAnimation = new TWEEN.Tween(coords).to({y:this.game.hudHeight * 0.5, x:this.game.cellWidth}, 500)
       .easing(TWEEN.Easing.Quadratic.In)
       .onUpdate((object) => {
         this.emitter.updateOwnerPos(object.x, object.y);

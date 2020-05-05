@@ -46,6 +46,8 @@ export class Ball {
     this.ballCont.y = pxy.pY;
     this.ballCont.width = this.cellWidth;
     this.ballCont.height = this.cellHeight;
+    this.isInPreviewMode = false;
+    this.previewSprite = null;
   }
 
   setDisabled(state) {
@@ -223,6 +225,17 @@ export class Ball {
       && this.game.field[this.y][this.x].ball === this) {
       this.game.field[this.y][this.x].ball = null;
     }
+  }
+
+  showPreview () {
+    this.ballCont.scale.set(0.3);
+    this.ballCont.alpha = 0;
+    this.game.cnt.game.addChild(this.ballCont);
+    let appearTween = new TWEEN.Tween(this.ballCont).to({alpha:1}, 400).start();
+  }
+
+  hidePreview () {
+    this.game.cnt.game.removeChild(this.ballCont);
   }
 
 }
