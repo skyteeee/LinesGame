@@ -147,7 +147,11 @@ export class Ball {
   }
 
   appear (delay= 0, callback) {
+    if (!this.isInPreviewMode) {
     this.ballCont.scale.set(0);
+    } else {
+      this.ballCont.scale.set(0.3);
+    }
     this.game.cnt.game.addChild(this.ballCont);
     let animation = new TWEEN.Tween(this.ballCont.scale).to({x:1, y:1}, 400)
       .easing(TWEEN.Easing.Quadratic.In).delay(delay);
@@ -228,10 +232,10 @@ export class Ball {
   }
 
   showPreview () {
-    this.ballCont.scale.set(0.3);
-    this.ballCont.alpha = 0;
+    this.isInPreviewMode = true;
+    this.ballCont.scale.set(0);
     this.game.cnt.game.addChild(this.ballCont);
-    let appearTween = new TWEEN.Tween(this.ballCont).to({alpha:1}, 400).start();
+    let appearTween = new TWEEN.Tween(this.ballCont.scale).to({x:0.3, y:0.3}, 400).start();
   }
 
   hidePreview () {
