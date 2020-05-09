@@ -98,7 +98,7 @@ export class Game extends Base {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, doubleBall, regular, regular, regular, regular];
-    this.forcedBallTypes = [contractionBall];
+    this.forcedBallTypes = [];
     this.nextBalls = [];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
@@ -860,7 +860,15 @@ export class Game extends Base {
   }
 
   generateBalls (areBallsReal = true) {
-    let empty = this.findEmptyCells();
+    let empty = this.findEmptyCells((cell) => {
+      for (let ball of this.nextBalls) {
+        if (cell.x === ball.x && cell.y === ball.y) {
+          return false;
+        }
+      }
+      return true;
+    });
+    
     let newBalls = [];
 
     if (areBallsReal) {
