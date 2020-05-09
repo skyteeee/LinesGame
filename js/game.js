@@ -90,6 +90,7 @@ export class Game extends Base {
     this.score = 0;
     this.earnedScore = 0;
     this.multiplier = 1;
+    this.toLvlUpMultiplier = 1;
     this.level = 1;
     this.levelToExpand = 5;
     this.levelToContract = 3;
@@ -152,7 +153,8 @@ export class Game extends Base {
     if (this.score + this.earnedScore >= this.scoreToLevelUp) {
       this.level++;
       this.multiplier = this.multiplier * 1.1;
-      this.scoreToLevelUp = Math.ceil(this.scoreToLevelUp + 100 * this.multiplier);
+      this.toLvlUpMultiplier = this.toLvlUpMultiplier * 1.5;
+      this.scoreToLevelUp = Math.ceil(this.scoreToLevelUp + 100 * this.toLvlUpMultiplier);
       this.addColorOnLvlUp();
       this.expandOnLvlUp();
       this.contractOnLvlUp();
@@ -868,7 +870,7 @@ export class Game extends Base {
       }
       return true;
     });
-    
+
     let newBalls = [];
 
     if (areBallsReal) {
