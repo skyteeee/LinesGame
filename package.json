@@ -9,17 +9,32 @@
   "devDependencies": {
     "@babel/core": "^7.9.0",
     "@babel/preset-env": "^7.9.5",
+    "babel-loader": "^8.1.0",
     "babelify": "^10.0.0",
     "browserify": "^16.5.1",
+    "clean-webpack-plugin": "^3.0.0",
     "copyfiles": "^2.2.0",
+    "css-loader": "^3.5.3",
+    "file-loader": "^6.0.0",
+    "html-webpack-plugin": "^4.3.0",
+    "style-loader": "^1.2.1",
     "terser": "^4.6.11",
-    "watchify": "^3.11.1"
+    "watchify": "^3.11.1",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.11.0",
+    "webpack-merge": "^4.2.2",
+    "xml-loader": "^1.2.1"
   },
   "scripts": {
     "build-js": "browserify -d ./js/main.js -o ./public/js/bundle.js",
     "prepare": "copyfiles index.html public/ & copyfiles css/lines.css public/ & copyfiles img/images* public/ & copyfiles fonts/* public/",
-    "build": "yarn prepare & browserify ./js/main.js | terser -c -m -o ./public/js/bundle.js",
-    "watch": "watchify ./js/main.js -o ./public/js/bundle.js -v -d"
+    "build-old": "yarn prepare & browserify ./js/main.js | terser -c -m -o ./public/js/bundle.js",
+    "watch-old": "watchify ./js/main.js -o ./public/js/bundle.js -v -d",
+    "watch": "copyfiles img/images* dist/ && copyfiles fonts/*.png dist/ && copyfiles fonts/*.xml dist/ && webpack --watch --config webpack.dev.js",
+    "server": "copyfiles img/images* dist/ && copyfiles fonts/*.png dist/ && copyfiles fonts/*.xml dist/ && webpack-dev-server --config webpack.dev.js",
+    "build": "webpack --config webpack.dev.js && copyfiles img/images* dist/ && copyfiles fonts/*.png dist/ && copyfiles fonts/*.xml dist/",
+    "build-prod": "webpack --config webpack.prod.js && copyfiles img/images* dist/ && copyfiles fonts/*.png dist/ && copyfiles fonts/*.xml dist/"
   },
   "dependencies": {
     "@babel/plugin-proposal-class-properties": "^7.8.3",

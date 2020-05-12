@@ -96,10 +96,11 @@ export class Game extends Base {
     this.levelToContract = 3;
     this.scoreToLevelUp = 100;
     this.levelToAddColor = 2;
+    this.availableCells = new Set();
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, doubleBall, regular, regular, regular, regular];
-    this.forcedBallTypes = [contractionBall];
+    this.forcedBallTypes = [];
     this.nextBalls = [];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
@@ -131,6 +132,17 @@ export class Game extends Base {
   init() {
     this.initGame();
     this.initEngine();
+  }
+
+  resetAvailableCells () {
+    this.cellGraphics.clear();
+    this.availableCells.clear();
+  }
+
+  drawAvailableCells () {
+    for (let cell of this.availableCells) {
+      cell.fillBackground();
+    }
   }
 
   setupResources() {
@@ -357,27 +369,36 @@ export class Game extends Base {
     if (cellPressed.ball !== null) {
       if (this.from) {
         this.from.handleSelect(false);
+        this.resetAvailableCells();
       }
-      if (this.from !== cellPressed) {
+      if (this.from !== cellPressed && !cellPressed.ball.isVanishing) {
         this.from = cellPressed;
+        this.resetAvailableCells();
+        this.checkForEmptyCellsAround(cellPressed, this.availableCells);
+        this.drawAvailableCells();
         cellPressed.handleSelect(true);
       } else {
         this.from = null;
       }
     } else {
       if (this.from) {
-        this.from.handleSelect(false);
-        cellPressed.setBall(this.from.ball);
-        let from = this.from;
-        this.addBlockedCell(from);
-        this.addBlockedCell(cellPressed);
-        cellPressed.ball.hoover(this.from.x, this.from.y, () => {
-          this.removeBlockedCell(from);
-          this.removeBlockedCell(cellPressed);
-          this.prepareNextMove(cellX, cellY, cellPressed);
-        });
-        this.from.ball = null;
-        this.from = null;
+        if (!this.availableCells.has(cellPressed)) {
+            console.log('CANT ACCESS CELL ', cellX, cellY);
+        } else {
+          this.from.handleSelect(false);
+          this.resetAvailableCells();
+          cellPressed.setBall(this.from.ball);
+          let from = this.from;
+          this.addBlockedCell(from);
+          this.addBlockedCell(cellPressed);
+          cellPressed.ball.hoover(this.from.x, this.from.y, () => {
+            this.removeBlockedCell(from);
+            this.removeBlockedCell(cellPressed);
+            this.prepareNextMove(cellX, cellY, cellPressed);
+          });
+          this.from.ball = null;
+          this.from = null;
+        }
       }
     }
   }
@@ -440,7 +461,6 @@ export class Game extends Base {
   }
 
   checkBalls(cellArray) {
-    console.log ('Entered checkBalls. Cell array: ', cellArray);
     for (let cell of cellArray) {
       if (cell !== null) {
         this.checkAll(cell.x, cell.y, cell, 'glow');
@@ -481,6 +501,11 @@ export class Game extends Base {
   }
 
   expandField() {
+    if (this.from) {
+      this.from.handleSelect(false);
+      this.resetAvailableCells();
+      this.from = null;
+    }
     this.cnt.field.scale.set(1);
     this.scaleY = 1;
     this.scaleX = 1;
@@ -673,6 +698,11 @@ export class Game extends Base {
 
   contractField () {
     if (this.fieldWidth > 6) {
+      if (this.from) {
+        this.from.handleSelect(false);
+        this.resetAvailableCells();
+        this.from = null;
+      }
       this.cnt.field.scale.set(1);
       this.oldField = this.field;
       this.fieldHeight -= 2;
@@ -794,6 +824,11 @@ export class Game extends Base {
     cell.ball = null;
     cell.handleSelect(false);
     if (isLast) {
+      if (this.from) {
+        this.resetAvailableCells();
+        this.checkForEmptyCellsAround(this.from, this.availableCells);
+        this.drawAvailableCells();
+      }
       this.doBonus();
       this.levelUpIfNeeded();
     }
@@ -1088,6 +1123,29 @@ export class Game extends Base {
       }
     }
     return {inARow:inARow, colorSet:colorSet};
+  }
+
+  checkForEmptyCellsAround (cell, alreadyCheckedCellsSet) {
+    this.trackEmptyCell(cell.x+1, cell.y, alreadyCheckedCellsSet);
+    this.trackEmptyCell(cell.x-1, cell.y, alreadyCheckedCellsSet);
+    this.trackEmptyCell(cell.x, cell.y+1, alreadyCheckedCellsSet);
+    this.trackEmptyCell(cell.x, cell.y-1, alreadyCheckedCellsSet);
+  }
+
+  trackEmptyCell (nx, ny, alreadyCheckedCellsSet) {
+    if (!(nx < 0) && !(nx > this.fieldWidth - 1)
+      && !(ny < 0) && !(ny > this.fieldHeight - 1)) {
+
+      let lookingAtCell = this.field[ny][nx];
+      if (!lookingAtCell.ball
+        && !alreadyCheckedCellsSet.has(lookingAtCell)) {
+
+        alreadyCheckedCellsSet.add(lookingAtCell);
+        this.checkForEmptyCellsAround(lookingAtCell, alreadyCheckedCellsSet);
+
+      }
+
+    }
   }
 
   createHUD () {

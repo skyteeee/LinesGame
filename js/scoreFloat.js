@@ -94,7 +94,9 @@ export class ScoreFloat {
         this.emitter.emit = false;
         setTimeout(() => {
           this.game.removeAnimatedObject(this.emitter);
-          this.game.app.stage.removeChild(this.particleCont);
+          this.emitter.destroy();
+          this.text.destroy();
+          this.particleCont.destroy({children:true});
           }, 500);
       }).start();
   }

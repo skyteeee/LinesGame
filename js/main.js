@@ -1,4 +1,6 @@
 import {Game} from "./game";
+import css from '../css/lines.css'
+
 
 function init () {
   game.init();

@@ -19,7 +19,6 @@ export class Base {
     gfx.clear();
 
     let gameHeight = this.height-this.hudHeight;
-    console.log('vy ponyali: ', this.height, this.hudHeight, gameHeight);
     gfx.beginFill(0xeaeae4);
     gfx.drawRect(0,0, this.width, gameHeight);
     gfx.endFill();
@@ -77,7 +76,9 @@ export class Base {
 
       this.onClick(pressCoord.x, pressCoord.y);
     });
+    this.cellGraphics = new PIXI.Graphics();
     this.cnt.background.addChild(this.graphics);
+    this.cnt.background.addChild(this.cellGraphics);
 
     this.app.loader.add('img/images2.json')
       .add('fonts/mainfont2.xml')

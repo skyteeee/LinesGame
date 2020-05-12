@@ -144,8 +144,9 @@ export class SuperBomb extends Ball {
 
   removeFromScene() {
     super.removeFromScene();
-    this.game.cnt.game.removeChild(this.particleCont);
     this.game.removeAnimatedObject(this.emitter);
+    this.emitter.destroy();
+    this.particleCont.destroy({children:true});
   }
 
 }

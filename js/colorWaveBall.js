@@ -47,6 +47,7 @@ export class ColorWave extends Ball {
         if (onComplete) {
           onComplete();
         }
+        rescale.stop();
         this.removeFromScene();
       }).start();
   }
