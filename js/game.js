@@ -14,6 +14,7 @@ import {X3Ball, x3Ball} from "./x3Ball";
 import {Base} from "./base";
 import {HUD} from "./HUD";
 import {GameOver} from "./gameOver";
+import {AccessDENIED} from "./accessDENIED";
 
 export class Game extends Base {
   constructor() {
@@ -239,7 +240,6 @@ export class Game extends Base {
 
   checkAll(x, y, cell, animationType = 'normal') {
     if (cell.ball !== null) {
-      this.earnedScore = 0;
       let state = false;
       let preState = false;
       let ballsToRemove = [];
@@ -279,7 +279,7 @@ export class Game extends Base {
       }
       if (state) {
         this.removeBalls(ballsToRemove, null, animationType);
-        this.animateScoreOnRemove(x, y, ballsToRemove.length);
+        this.animateScoreOnRemove(x, y, ballsToRemove.length, animationType);
         if (rowsRemoved > 1) {
           this.possibleBallTypes.push(x3Ball);
         }
@@ -288,18 +288,27 @@ export class Game extends Base {
     }
   }
 
-  animateScoreOnRemove(x, y, ballAmount) {
+  animateScoreOnRemove(x, y, ballAmount, animationType = 'normal') {
     let pixel = xy2screen(x, y, this);
-    let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY + this.hudHeight, this);
-    floating.animate(this);
-    this.HUD.scoreAnimation(ballAmount*50);
-    this.earnedScore = 0;
+    if (animationType === 'glow') {
+      setTimeout(() => {
+        let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY + this.hudHeight, this);
+        floating.animate(this);
+        this.HUD.scoreAnimation(ballAmount * 50);
+        this.earnedScore = 0;
+      }, 1200);
+    } else {
+      let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY + this.hudHeight, this);
+      floating.animate(this);
+      this.HUD.scoreAnimation(ballAmount * 50);
+      this.earnedScore = 0;
+    }
   }
 
   prepareNextMove(x, y, cell) {
     if (!this.checkAll(x, y, cell)) {
       if (this.generateBalls(true) !== true) {
-        this.isGameOver = true;
+        this.turnOnGameOver();
       } else {
         this.generateBalls(false);
       }
@@ -383,7 +392,7 @@ export class Game extends Base {
     } else {
       if (this.from) {
         if (!this.availableCells.has(cellPressed)) {
-            console.log('CANT ACCESS CELL ', cellX, cellY);
+            new AccessDENIED(cellX, cellY, this).appear();
         } else {
           this.from.handleSelect(false);
           this.resetAvailableCells();
@@ -420,10 +429,6 @@ export class Game extends Base {
           emptyCells.push(cell);
         }
       }
-    }
-
-    if (emptyCells.length === 0) {
-      this.turnOnGameOver();
     }
 
     return emptyCells;
@@ -501,11 +506,7 @@ export class Game extends Base {
   }
 
   expandField() {
-    if (this.from) {
-      this.from.handleSelect(false);
-      this.resetAvailableCells();
-      this.from = null;
-    }
+    this.resetFrom();
     this.cnt.field.scale.set(1);
     this.scaleY = 1;
     this.scaleX = 1;
@@ -698,11 +699,7 @@ export class Game extends Base {
 
   contractField () {
     if (this.fieldWidth > 6) {
-      if (this.from) {
-        this.from.handleSelect(false);
-        this.resetAvailableCells();
-        this.from = null;
-      }
+      this.resetFrom();
       this.cnt.field.scale.set(1);
       this.oldField = this.field;
       this.fieldHeight -= 2;
@@ -756,8 +753,17 @@ export class Game extends Base {
     }
   }
 
+  resetFrom () {
+    if (this.from) {
+      this.from.handleSelect(false);
+      this.resetAvailableCells();
+      this.from = null;
+    }
+  }
+
   superBombRemoveBalls (x, y) {
     this.setBlock();
+    this.resetFrom();
     this.earnedScore = -Math.floor(this.score*0.25);
     let balls = [];
     for (let rowIdx = 0; rowIdx < this.field.length; rowIdx++) {
@@ -981,23 +987,24 @@ export class Game extends Base {
         }
       }
 
-      if (empty.length === 0) {
-        this.delay = 0;
-        return false;
-      } else {
-
-        if (empty.length <= 0.33 * this.fieldHeight * this.fieldWidth && !this.checkForSuperBombs()) {
-          this.forcedBallTypes.push(superBomb);
-        }
-        let cells = [];
-        for (let ball of newBalls) {
-          let cell = this.field[ball.y][ball.x];
-          cells.push(cell);
-        }
-        this.checkBalls(cells);
-        this.delay = 0;
-        return true;
+      if (empty.length <= 0.33 * this.fieldHeight * this.fieldWidth && !this.checkForSuperBombs()) {
+        this.forcedBallTypes.push(superBomb);
       }
+      let cells = [];
+      for (let ball of newBalls) {
+        let cell = this.field[ball.y][ball.x];
+        cells.push(cell);
+      }
+      this.checkBalls(cells);
+      this.delay = 0;
+      for (let row of this.field) {
+        for (let cell of row) {
+          if (!cell.ball || cell.ball.isVanishing) {
+            return true;
+          }
+        }
+      }
+      return false;
     } else {
 
       newBalls = this.createNewBallsArray(empty);
@@ -1005,6 +1012,7 @@ export class Game extends Base {
       for (let ball of newBalls) {
         ball.showPreview();
       }
+      return true;
     }
   }
 

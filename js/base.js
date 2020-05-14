@@ -106,6 +106,7 @@ export class Base {
     this.tex.ballOverlay = {
       particleBall: this.tex.allImg['particle_ball.png'],
       x3: this.tex.allImg['overlay_x3.png'],
+      denied: this.tex.allImg['close.png'],
       contract: this.tex.allImg['overlay_contract.png'],
       expand: this.tex.allImg['overlay_expand.png'],
       rainbow: this.tex.allImg['ball_rainbow.png'],
