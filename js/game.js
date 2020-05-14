@@ -101,7 +101,7 @@ export class Game extends Base {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, doubleBall, regular, regular, regular, regular];
-    this.forcedBallTypes = [];
+    this.forcedBallTypes = [colorWave];
     this.nextBalls = [];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
@@ -576,6 +576,7 @@ export class Game extends Base {
 
   colorWaveMode(colorIdx) {
     if (!this.isColorWaveModeOn) {
+      this.resetFrom();
       let color = this.possibleBallColors[colorIdx];
       this.colorWaveIdx = colorIdx;
       let counter = 0;
