@@ -18,7 +18,7 @@ export class Cell {
 
   fillBackground () {
     let gfx = this.game.cellGraphics;
-    gfx.beginFill(0xe0eae0);
+    gfx.beginFill(0xd8dfd8);
     let p = xy2screen(this.x, this.y, this.game);
     gfx.drawRect(p.pX-this.game.cellWidth*0.4, p.pY - this.game.cellHeight*0.4, this.game.cellWidth*0.8, this.game.cellHeight*0.8);
     gfx.endFill();

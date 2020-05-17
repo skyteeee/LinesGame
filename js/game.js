@@ -101,7 +101,7 @@ export class Game extends Base {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, doubleBall, regular, regular, regular, regular];
-    this.forcedBallTypes = [];
+    this.forcedBallTypes = [colorWave, superBomb];
     this.nextBalls = [];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
@@ -360,7 +360,7 @@ export class Game extends Base {
       return;
     }
     let cell = this.field[cellY][cellX];
-    if (cell.ball && cell.ball.getType() === colorWave && cell.ball.colorIdx === this.colorWaveIdx) {
+    if (cell.ball && cell.ball.getType() === colorWave && cell.ball.colorIdx === this.colorWaveIdx && !cell.ball.isVanishing) {
       this.removeBalls([cell], null);
       this.animateScoreOnRemove(cellX, cellY, 1);
     }
@@ -644,11 +644,11 @@ export class Game extends Base {
       let row2 = this.field[this.fieldHeight - 1];
       let cell1 = row1[xidx];
       let cell2 = row2[xidx];
-      if (cell1.ball) {
+      if (cell1.ball && !cell1.ball.isVanishing) {
         cell1.ball.setDisabled(true);
         balls.push(cell1);
       }
-      if (cell2.ball) {
+      if (cell2.ball && !cell2.ball.isVanishing) {
         cell2.ball.setDisabled(true);
         balls.push(cell2);
       }
@@ -656,11 +656,11 @@ export class Game extends Base {
     for (let yidx = 1; yidx < this.fieldHeight - 1; yidx++) {
       let cell1 = this.field[yidx][0];
       let cell2 = this.field[yidx][this.fieldWidth - 1];
-      if (cell1.ball) {
+      if (cell1.ball && !cell1.ball.isVanishing) {
         cell1.ball.setDisabled(true);
         balls.push(cell1);
       }
-      if (cell2.ball) {
+      if (cell2.ball && !cell2.ball.isVanishing) {
         cell2.ball.setDisabled(true);
         balls.push(cell2);
       }
@@ -772,7 +772,7 @@ export class Game extends Base {
 
       for (let cell of row) {
         cell.handleSelect(false);
-        if (cell.ball) {
+        if (cell.ball && !cell.ball.isVanishing) {
           cell.ball.setDisabled(true);
           balls.push(cell);
         }
