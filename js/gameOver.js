@@ -4,6 +4,7 @@ import TWEEN from "@tweenjs/tween.js";
 export class GameOver {
   constructor(game) {
     this.game = game;
+    this.cont = new PIXI.Container();
     this.gameOverText = new PIXI.Text('Game Over',
       new PIXI.TextStyle({
         fontFamily: 'MainFont',
@@ -36,6 +37,8 @@ export class GameOver {
     this.smallText.x = this.game.width/2-this.smallText.width/2;
     this.smallText.y = this.game.height/4-this.smallText.height/2+this.gameOverText.height-this.game.hudHeight;
 
+
+    this.cont.addChild(this.gfx, this.gameOverText, this.smallText);
   }
 
   updateSmallText() {
@@ -45,12 +48,10 @@ export class GameOver {
 
   show() {
     this.updateSmallText();
-    this.game.app.stage.addChild(this.gfx);
     this.gfx.alpha = 0;
-    this.game.app.stage.addChild(this.gameOverText);
     this.gameOverText.alpha = 0;
-    this.game.app.stage.addChild(this.smallText);
     this.smallText.alpha = 0;
+    this.game.app.stage.addChild(this.cont);
 
     let smallTextAnimation = new TWEEN.Tween(this.smallText).to({alpha:1}, 500);
     let animation = new TWEEN.Tween(this.gfx).to({alpha:1}, 300).start();
@@ -59,12 +60,8 @@ export class GameOver {
   }
 
   hide() {
-    let animation = new TWEEN.Tween(this.gameOverText).to({alpha:0}, 300)
-      .onComplete(() => {this.game.app.stage.removeChild(this.gameOverText)}).start();
-    let animation2 = new TWEEN.Tween(this.gfx).to({alpha:0}, 300)
-      .onComplete(() => {this.game.app.stage.removeChild(this.gfx)}).start();
-    let animation3 = new TWEEN.Tween(this.smallText).to({alpha:0}, 300)
-      .onComplete(() => {this.game.app.stage.removeChild(this.smallText)}).start();
+    let animation = new TWEEN.Tween(this.cont).to({alpha:0}, 300)
+      .onComplete(() => {this.game.app.stage.removeChild(this.cont)}).start();
   }
 
 }

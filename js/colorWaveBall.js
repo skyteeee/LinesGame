@@ -19,7 +19,11 @@ export class ColorWave extends Ball {
     return colorWave;
   }
   getScore() {
-    return 10;
+    if (this.game.mode === 'easy') {
+      return 7;
+    } else {
+      return 10;
+    }
   }
 
   selected() {

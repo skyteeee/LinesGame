@@ -17,7 +17,11 @@ export class RegularBall extends Ball {
   }
 
   getScore() {
-    return 5;
+    if (this.game.mode === 'easy') {
+      return 4
+    } else {
+      return 5;
+    }
   }
 
   reinit() {

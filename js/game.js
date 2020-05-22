@@ -15,6 +15,7 @@ import {Base} from "./base";
 import {HUD} from "./HUD";
 import {GameOver} from "./gameOver";
 import {AccessDENIED} from "./accessDENIED";
+import {NewGameScreen} from "./newGameScreen";
 
 export class Game extends Base {
   constructor() {
@@ -30,6 +31,7 @@ export class Game extends Base {
     this.blockClick = false;
     this.colorWaveTimer = null;
     this.lastClickTime = 0;
+    this.mode = 'easy';
     this.HUD = null;
     this.bonusQueue = [];
     this.lastTime = null;
@@ -91,6 +93,7 @@ export class Game extends Base {
     this.score = 0;
     this.earnedScore = 0;
     this.multiplier = 1;
+    this.toLvlUpDelta = 100;
     this.toLvlUpMultiplier = 1;
     this.level = 1;
     this.levelToExpand = 4;
@@ -101,7 +104,7 @@ export class Game extends Base {
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
     this.possibleBallTypes = [regular, regular, regular, regular, regular, doubleBall, regular, regular, regular, regular];
-    this.forcedBallTypes = [colorWave, superBomb];
+    this.forcedBallTypes = [];
     this.nextBalls = [];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
@@ -151,6 +154,8 @@ export class Game extends Base {
     this.generateBalls(true);
     this.generateBalls(false);
     this.createHUD();
+    this.newGameScreen = new NewGameScreen(this);
+    this.newGameScreen.show();
     this.gameOver = new GameOver(this);
   }
 
@@ -170,7 +175,7 @@ export class Game extends Base {
       this.level++;
       this.multiplier = this.multiplier * 1.1;
       this.toLvlUpMultiplier = this.toLvlUpMultiplier * 1.25;
-      this.scoreToLevelUp = Math.ceil(this.scoreToLevelUp + 100 * this.toLvlUpMultiplier);
+      this.scoreToLevelUp = Math.ceil(this.scoreToLevelUp + this.toLvlUpDelta * this.toLvlUpMultiplier);
       this.addColorOnLvlUp();
       this.expandOnLvlUp();
       this.contractOnLvlUp();
@@ -278,6 +283,12 @@ export class Game extends Base {
         rowsRemoved ++;
       }
       if (state) {
+        for (let cell2remove of ballsToRemove) {
+          if (cell2remove === this.from) {
+            this.resetFrom();
+            break;
+          }
+        }
         this.removeBalls(ballsToRemove, null, animationType);
         this.animateScoreOnRemove(x, y, ballsToRemove.length, animationType);
         if (rowsRemoved > 1) {
@@ -1135,10 +1146,16 @@ export class Game extends Base {
   }
 
   checkForEmptyCellsAround (cell, alreadyCheckedCellsSet) {
-    this.trackEmptyCell(cell.x+1, cell.y, alreadyCheckedCellsSet);
-    this.trackEmptyCell(cell.x-1, cell.y, alreadyCheckedCellsSet);
-    this.trackEmptyCell(cell.x, cell.y+1, alreadyCheckedCellsSet);
-    this.trackEmptyCell(cell.x, cell.y-1, alreadyCheckedCellsSet);
+    if (cell.ball && cell.ball.getType() === superBomb || this.mode === 'easy') {
+      for (let emptyCell of this.findEmptyCells()) {
+        alreadyCheckedCellsSet.add(emptyCell);
+      }
+    } else {
+      this.trackEmptyCell(cell.x + 1, cell.y, alreadyCheckedCellsSet);
+      this.trackEmptyCell(cell.x - 1, cell.y, alreadyCheckedCellsSet);
+      this.trackEmptyCell(cell.x, cell.y + 1, alreadyCheckedCellsSet);
+      this.trackEmptyCell(cell.x, cell.y - 1, alreadyCheckedCellsSet);
+    }
   }
 
   trackEmptyCell (nx, ny, alreadyCheckedCellsSet) {

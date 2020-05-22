@@ -22,7 +22,11 @@ export class RainbowBall extends Ball {
   }
 
   getScore() {
-    return 25;
+    if (this.game.mode === 'easy') {
+      return 20;
+    } else {
+      return 25;
+    }
   }
 
   getType() {

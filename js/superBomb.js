@@ -121,7 +121,11 @@ export class SuperBomb extends Ball {
   }
 
   getScore() {
-    return 10;
+    if (this.game.mode === 'easy') {
+      return 7;
+    } else {
+      return 10;
+    }
   }
 
   reinit() {
