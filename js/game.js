@@ -335,6 +335,7 @@ export class Game extends Base {
           }
         }
       }
+      this.getLeaderBoard(this.mode);
       this.initGame();
       this.createFieldGraphics(this.graphics);
       this.generateBalls(true);
@@ -449,6 +450,7 @@ export class Game extends Base {
   turnOnGameOver() {
     this.isGameOver = true;
     this.score = Math.floor(this.score);
+    this.endSession();
     this.gameOver.show();
   }
 
@@ -943,6 +945,9 @@ export class Game extends Base {
 
   incrementRemovedBalls() {
     this.ballsRemoved ++;
+    if (this.ballsRemoved%20 === 0) {
+      setTimeout(() => {this.updateSession();}, 1000);
+    }
     if (this.ballsRemoved%29 === 0) {
       this.forcedBallTypes.push(colorWave);
     }

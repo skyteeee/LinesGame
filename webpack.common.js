@@ -54,7 +54,7 @@ module.exports = {
       // If you pass a plain object, it will be merged with the default values
       // (New in version 4)
       templateParameters: {
-        'version': 'v0.6.0'
+        'version': 'v0.6.1'
       },
       template: 'index.ejs'
     })

@@ -33,17 +33,23 @@ export class GameOver {
       strokeThickness: 1,
     });
 
-    this.smallText = new PIXI.Text(`Your score was ${this.game.score}.`, this.smallTextStyle);
+    this.smallText = new PIXI.Text(`Your score: ${this.game.score}.`, this.smallTextStyle);
     this.smallText.x = this.game.width/2-this.smallText.width/2;
     this.smallText.y = this.game.height/4-this.smallText.height/2+this.gameOverText.height-this.game.hudHeight;
 
+    this.rankText = new PIXI.Text(`Rank: ${this.game.rank}`, this.smallTextStyle);
+    this.rankText.x = this.game.width/2-this.rankText.width/2;
+    this.rankText.y = this.game.height/4-this.rankText.height/2+this.gameOverText.height+this.smallText.height-this.game.hudHeight;
 
-    this.cont.addChild(this.gfx, this.gameOverText, this.smallText);
+
+    this.cont.addChild(this.gfx, this.gameOverText, this.smallText, this.rankText);
   }
 
   updateSmallText() {
     this.smallText.text = `Your score: ${this.game.score}`;
     this.smallText.x = this.game.width/2-this.smallText.width/2;
+    this.rankText.text = `Rank: ${this.game.rank}`;
+    this.rankText.x = this.game.width/2-this.rankText.width/2;
   }
 
   show() {

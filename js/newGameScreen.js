@@ -82,7 +82,7 @@ export class NewGameScreen {
   }
 
   beginGame() {
-    console.log('entered beginGame');
+    this.game.newSession();
     let animation = new TWEEN.Tween(this.cont).to({alpha: 0}, 300).onComplete(() => {
       this.game.app.stage.removeChild(this.cont);
     }).start();
