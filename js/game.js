@@ -326,6 +326,36 @@ export class Game extends Base {
     }
   }
 
+  showNameDialog () {
+    let dialog = document.getElementById('nameDialog');
+    dialog.className = 'dialog';
+    let save = document.getElementById('save');
+    save.onclick = () => {
+      this.saveScore();
+    };
+
+    let cancel = document.getElementById('cancel');
+    cancel.onclick = () => {
+      this.hideNameDialog();
+    }
+
+  }
+
+  saveScore () {
+    let name = document.getElementById('name').value;
+    if (name.length > 3) {
+      this.endSession(name);
+      this.hideNameDialog();
+    } else {
+      alert('Your name is required (4-20 characters).')
+    }
+  }
+
+  hideNameDialog () {
+    document.getElementById('nameDialog').className = 'dialog hidden';
+    this.operateGameOver();
+  }
+
   operateGameOver() {
     if (this.isGameOver) {
       for (let row of this.field) {
@@ -379,7 +409,9 @@ export class Game extends Base {
   }
 
   regularClick(x, y) {
-    this.operateGameOver();
+    if (this.isGameOver) {
+      this.showNameDialog();
+    }
     let cellX = Math.floor(x / this.cellWidth);
     let cellY = Math.floor(y / this.cellHeight);
     if (this.checkForBlockedCell(cellX, cellY)) {
@@ -450,7 +482,7 @@ export class Game extends Base {
   turnOnGameOver() {
     this.isGameOver = true;
     this.score = Math.floor(this.score);
-    this.endSession();
+    this.updateSession();
     this.gameOver.show();
   }
 
@@ -945,7 +977,7 @@ export class Game extends Base {
 
   incrementRemovedBalls() {
     this.ballsRemoved ++;
-    if (this.ballsRemoved%20 === 0) {
+    if (this.ballsRemoved%10 === 0) {
       setTimeout(() => {this.updateSession();}, 1000);
     }
     if (this.ballsRemoved%29 === 0) {

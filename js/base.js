@@ -7,6 +7,7 @@ export class Base {
     this.app = null;
     this.height = 0;
     this.width = 0;
+    this.rank = 999;
     this.cnt = {};
     this.fieldHeight = 8;
     this.fieldWidth = 8;
@@ -203,16 +204,14 @@ export class Base {
     this.sendData('https://lines.navalclash.com/session/update',
       {
         version: this.version,
-        uuid:this.sessionID,
+        uuid: this.sessionID,
         score: Math.round(this.score),
         level: this.level,
         mode: this.mode,
         done: this.isGameOver ? 1 : 0
-    }, data => {
-      if (this.isGameOver) {
+      }, data => {
         this.rank = data.data.rank;
-      }
-      console.log('Received session update. ', data.data);
+        console.log('Received session update. ', data.data);
       })
   }
 

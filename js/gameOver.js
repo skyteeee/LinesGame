@@ -22,7 +22,8 @@ export class GameOver {
     this.gfx.drawRect(0, 0, this.game.width, this.game.height);
     this.gfx.endFill();
 
-    this.gfx.on('pointerdown', () => {this.game.operateGameOver()});
+    this.gfx.interactive = true;
+    this.gfx.on('pointerdown', () => {this.game.showNameDialog()});
 
     this.smallTextStyle = new PIXI.TextStyle({
       fontFamily: 'MainFont',
@@ -57,6 +58,7 @@ export class GameOver {
     this.gfx.alpha = 0;
     this.gameOverText.alpha = 0;
     this.smallText.alpha = 0;
+    this.cont.alpha = 1;
     this.game.app.stage.addChild(this.cont);
 
     let smallTextAnimation = new TWEEN.Tween(this.smallText).to({alpha:1}, 500);
