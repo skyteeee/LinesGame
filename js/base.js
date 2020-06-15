@@ -183,6 +183,7 @@ export class Base {
         mode: this.mode,
         user: name
     }, data => {
+      this.getLeaderBoard(this.mode);
       this.rank = data.data.rank;
       this.gameOver.updateSmallText();
       console.log('Finished session with data ', data.data);
@@ -196,6 +197,7 @@ export class Base {
       limit: 10,
       app: 'lines'
     }, data => {
+      this.leaderboard = data.data;
       console.log('Received top scores ', data.data);
     })
   }

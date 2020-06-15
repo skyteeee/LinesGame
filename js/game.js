@@ -329,6 +329,7 @@ export class Game extends Base {
   showNameDialog () {
     let dialog = document.getElementById('nameDialog');
     dialog.className = 'dialog';
+    document.getElementById('name').value = window.localStorage.getItem('lines.savedName');
     let save = document.getElementById('save');
     save.onclick = () => {
       this.saveScore();
@@ -344,6 +345,7 @@ export class Game extends Base {
   saveScore () {
     let name = document.getElementById('name').value;
     if (name.length > 3) {
+      window.localStorage.setItem('lines.savedName', name);
       this.endSession(name);
       this.hideNameDialog();
     } else {
@@ -365,8 +367,8 @@ export class Game extends Base {
           }
         }
       }
-      this.getLeaderBoard(this.mode);
       this.initGame();
+      this.newGameScreen.show();
       this.createFieldGraphics(this.graphics);
       this.generateBalls(true);
       this.gameOver.hide();

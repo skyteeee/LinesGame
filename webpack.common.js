@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 module.exports = {
   entry: './js/main.js',
@@ -13,7 +14,7 @@ module.exports = {
       {
         test: /\.css$/,
         use: [
-          'style-loader',
+          MiniCssExtractPlugin.loader,
           'css-loader'
         ],
       },
@@ -49,12 +50,15 @@ module.exports = {
     ]
   },
   plugins: [
+    new MiniCssExtractPlugin({
+      filename: '[name]-[contenthash].css',
+      chunkFilename: '[id]-[contenthash].css',}),
     new CleanWebpackPlugin({cleanOnceBeforeBuildPatterns: ['**/*', '!img*', '!img/*', '!fonts*', '!fonts/*']}),
     new HtmlWebpackPlugin({
       // If you pass a plain object, it will be merged with the default values
       // (New in version 4)
       templateParameters: {
-        'version': 'v0.7.0'
+        'version': 'v0.7.1'
       },
       template: 'index.ejs'
     })
