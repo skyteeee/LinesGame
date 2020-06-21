@@ -26,6 +26,7 @@ export class Game extends Base {
     this.delay = 0;
     this.scaleX = 1;
     this.scaleY = 1;
+    this.delayed = [];
     this.blockedCells = [];
     this.animateObjects = [];
     this.blockClick = false;
@@ -65,6 +66,22 @@ export class Game extends Base {
     for (let object of this.animateObjects) {
       object.update(elapsed);
     }
+    if (Object.keys(TWEEN._tweens).length === 0 && this.delayed.length > 0) {
+      this.destroyDelayed();
+    }
+  }
+
+  destroyDelayed () {
+    console.log(`Destroying ${this.delayed.length} objects.`);
+    for (let delayedObj of this.delayed) {
+      delayedObj.obj.destroy({children: delayedObj.children});
+    }
+    this.delayed = [];
+  }
+
+  addDelayed (object, children = false) {
+    object.parent.removeChild(object);
+    this.delayed.push({obj: object, children: children});
   }
 
   addAnimatedObject(object) {
@@ -360,6 +377,7 @@ export class Game extends Base {
 
   operateGameOver() {
     if (this.isGameOver) {
+      this.resetFrom();
       for (let row of this.field) {
         for (let cell of row) {
           if (cell.ball) {
@@ -919,6 +937,9 @@ export class Game extends Base {
     }
     for (let index in cellArray) {
       let cell = cellArray[index];
+      if (cell.ball.isVanishing) {
+        continue;
+      }
       cell.ball.isVanishing = true;
       score += cell.ball.getScore();
       this.addBlockedCell(cell);

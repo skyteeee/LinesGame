@@ -1,4 +1,5 @@
 import {Game} from "./game";
+import TWEEN from "@tweenjs/tween.js";
 import css from '../css/lines.css'
 
 
@@ -15,3 +16,4 @@ window.onload = init;
 
 let game = new Game();
 window.game = game;
+window.TWEEN = TWEEN;

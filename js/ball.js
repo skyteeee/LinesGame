@@ -224,7 +224,7 @@ export class Ball {
   }
 
   removeFromScene () {
-    this.ballCont.destroy({children:true});
+    this.game.addDelayed(this.ballCont, true);
     if (this.y < this.game.fieldHeight && this.x < this.game.fieldWidth
       && this.game.field[this.y][this.x].ball === this) {
       this.game.field[this.y][this.x].ball = null;

@@ -190,11 +190,11 @@ export class Base {
       })
   }
 
-  getLeaderBoard (mode = 'easy') {
+  getLeaderBoard (mode = 'easy', amount = 10) {
     this.sendData('https://lines.navalclash.com/scores/top', {
       version: this.version,
       mode: mode,
-      limit: 10,
+      limit: amount,
       app: 'lines'
     }, data => {
       this.leaderboard = data.data;
@@ -210,6 +210,7 @@ export class Base {
         score: Math.round(this.score),
         level: this.level,
         mode: this.mode,
+        user: window.localStorage.getItem('lines.savedName'),
         done: this.isGameOver ? 1 : 0
       }, data => {
         this.rank = data.data.rank;

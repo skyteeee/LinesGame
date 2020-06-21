@@ -21,6 +21,7 @@ export class NewGameScreen {
     this.gfx.beginFill(0, 0.5);
     this.gfx.drawRect(0, 0, this.game.width, this.game.height);
     this.gfx.endFill();
+    this.gfx.interactive = true;
 
     this.easygfx = new PIXI.Graphics();
     this.easygfx.beginFill(0xeaeae4);
