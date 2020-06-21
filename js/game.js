@@ -8,30 +8,35 @@ import {ScoreFloat} from "./scoreFloat";
 import {ColorWave, colorWave} from "./colorWaveBall";
 import {ExpansionBall, expansionBall} from "./expansionBall";
 import {ContractionBall, contractionBall} from "./contractionBall";
-import {ColorWaveTimer} from "./colorWaveTimer";
 import {superBomb, SuperBomb} from "./superBomb";
 import {rainbow, RainbowBall} from "./rainbowBall";
 import {X3Ball, x3Ball} from "./x3Ball";
+import {Base} from "./base";
+import {HUD} from "./HUD";
+import {GameOver} from "./gameOver";
+import {AccessDENIED} from "./accessDENIED";
+import {NewGameScreen} from "./newGameScreen";
 
-export class Game {
+export class Game extends Base {
   constructor() {
+    super();
     this.canvas = null;
     this.ctx = null;
     this.from = null;
-    this.height = 0;
-    this.width = 0;
     this.delay = 0;
     this.scaleX = 1;
     this.scaleY = 1;
-    this.cellHeight = 0;
-    this.cellWidth = 0;
-    this.cellHeight2 = 0;
-    this.cellWidth2 = 0;
-    this.hudHeight = 0;
+    this.delayed = [];
     this.blockedCells = [];
-    this.drawOverAll = [];
+    this.animateObjects = [];
     this.blockClick = false;
     this.colorWaveTimer = null;
+    this.lastClickTime = 0;
+    this.mode = 'easy';
+    this.HUD = null;
+    this.bonusQueue = [];
+    this.lastTime = null;
+      this.currentBonus = null;
     this.possibleBallColors = [
       new Color(218, 0, 25),
       new Color(255, 91, 0),
@@ -44,38 +49,53 @@ export class Game {
 
   }
 
-  resize () {
-    console.log('resizing');
-    this.gameHeight = this.canvas.offsetHeight;
-    this.width = this.canvas.offsetWidth;
-    this.hudHeight = this.gameHeight-this.width;
-    this.height = this.gameHeight - this.hudHeight;
-    this.cellHeight = this.height / this.fieldHeight;
-    this.cellWidth = this.width / this.fieldWidth;
-    this.cellHeight2 = this.cellHeight / 2;
-    this.cellWidth2 = this.cellWidth / 2;
-    this.canvas.width = this.width;
-    this.canvas.height = this.gameHeight;
-    for (let row of this.field) {
-      for (let cell of row) {
-        if (cell.ball) {
-          cell.ball.cellWidth = this.cellWidth;
-          cell.ball.cellHeight = this.cellHeight;
-        }
-      }
-    }
-  }
-
   refresh(time) {
     this.animate(time);
-    this.draw();
     if (this.decideToRefresh()) {
       requestAnimationFrame((time1 => this.refresh(time1)));
     }
   }
 
   animate(time) {
+    if (this.lastTime === null) {
+      this.lastTime = time;
+    }
+    let elapsed = (time - this.lastTime) * 0.001;
+    this.lastTime = time;
     TWEEN.update(time);
+    for (let object of this.animateObjects) {
+      object.update(elapsed);
+    }
+    if (Object.keys(TWEEN._tweens).length === 0 && this.delayed.length > 0) {
+      this.destroyDelayed();
+    }
+  }
+
+  destroyDelayed () {
+    console.log(`Destroying ${this.delayed.length} objects.`);
+    for (let delayedObj of this.delayed) {
+      delayedObj.obj.destroy({children: delayedObj.children});
+    }
+    this.delayed = [];
+  }
+
+  addDelayed (object, children = false) {
+    object.parent.removeChild(object);
+    this.delayed.push({obj: object, children: children});
+  }
+
+  addAnimatedObject(object) {
+    this.animateObjects.push(object);
+  }
+
+  removeAnimatedObject(object) {
+    for (let index in this.animateObjects) {
+      let element = this.animateObjects[index];
+      if (element === object) {
+        this.animateObjects.splice(index, 1);
+        break;
+      }
+    }
   }
 
   decideToRefresh() {
@@ -90,20 +110,24 @@ export class Game {
     this.score = 0;
     this.earnedScore = 0;
     this.multiplier = 1;
+    this.toLvlUpDelta = 100;
+    this.toLvlUpMultiplier = 1;
     this.level = 1;
-    this.levelToExpand = 5;
+    this.levelToExpand = 4;
     this.levelToContract = 3;
     this.scoreToLevelUp = 100;
-    this.levelToAddColor = 3;
+    this.levelToAddColor = 2;
+    this.availableCells = new Set();
     this.isGameOver = false;
     this.isColorWaveModeOn = false;
-    this.possibleBallTypes = [regular, regular, regular, doubleBall, regular, regular, regular, regular, regular, regular];
-    this.forcedBallTypes = [x3Ball];
+    this.possibleBallTypes = [regular, regular, regular, regular, regular, doubleBall, regular, regular, regular, regular];
+    this.forcedBallTypes = [];
+    this.nextBalls = [];
     this.ballsRemoved = 0;
     this.colorWaveIdx = null;
 
     if (this.height) {
-      this.cellHeight = this.height / this.fieldHeight;
+      this.cellHeight = (this.height-this.hudHeight) / this.fieldHeight;
       this.cellWidth = this.width / this.fieldWidth;
       this.cellHeight2 = this.cellHeight / 2;
       this.cellWidth2 = this.cellWidth / 2;
@@ -128,24 +152,28 @@ export class Game {
 
   init() {
     this.initGame();
-    this.canvas = document.getElementById('field');
-    this.canvas.onclick = (event) => {this.onClick(event.offsetX, event.offsetY);};
-    this.ctx = this.canvas.getContext('2d');
+    this.initEngine();
+  }
 
-    this.gameHeight = this.canvas.offsetHeight;
-    this.width = this.canvas.offsetWidth;
-    this.hudHeight = this.gameHeight-this.width;
-    this.height = this.gameHeight - this.hudHeight;
-    this.cellHeight = this.height / this.fieldHeight;
-    this.cellWidth = this.width / this.fieldWidth;
-    this.cellHeight2 = this.cellHeight / 2;
-    this.cellWidth2 = this.cellWidth / 2;
-    this.canvas.width = this.width;
-    this.canvas.height = this.gameHeight;
+  resetAvailableCells () {
+    this.cellGraphics.clear();
+    this.availableCells.clear();
+  }
 
+  drawAvailableCells () {
+    for (let cell of this.availableCells) {
+      cell.fillBackground();
+    }
+  }
 
-    console.log('canvas size is ', this.gameHeight, ':', this.width);
-    this.generateBalls();
+  setupResources() {
+    super.setupResources();
+    this.generateBalls(true);
+    this.generateBalls(false);
+    this.createHUD();
+    this.newGameScreen = new NewGameScreen(this);
+    this.newGameScreen.show();
+    this.gameOver = new GameOver(this);
   }
 
   addColorOnLvlUp() {
@@ -153,18 +181,23 @@ export class Game {
       if (this.newColorIdx < this.possibleBallColors.length - 1) {
         this.newColorIdx++;
       }
+      if (this.levelToAddColor === 2) {
+        this.levelToAddColor = 1
+      }
     }
   }
-
 
   levelUpIfNeeded() {
     if (this.score + this.earnedScore >= this.scoreToLevelUp) {
       this.level++;
-      this.multiplier = this.multiplier * 1.2;
-      this.scoreToLevelUp = Math.ceil(this.scoreToLevelUp + 100 * this.multiplier);
+      this.multiplier = this.multiplier * 1.1;
+      this.toLvlUpMultiplier = this.toLvlUpMultiplier * 1.25;
+      this.scoreToLevelUp = Math.ceil(this.scoreToLevelUp + this.toLvlUpDelta * this.toLvlUpMultiplier);
       this.addColorOnLvlUp();
       this.expandOnLvlUp();
       this.contractOnLvlUp();
+      this.levelUpIfNeeded();
+      this.HUD.update();
     }
   }
 
@@ -194,118 +227,213 @@ export class Game {
     return false;
   }
 
-  addOverallObject(object) {
-    this.drawOverAll.push(object);
-  }
-
-  removeOverallObject(object) {
-    for (let idx in this.drawOverAll) {
-      if (object === this.drawOverAll[idx]) {
-        this.drawOverAll.splice(idx, 1);
-        break;
+  checkForWholeLine (state1, state2, ballsToRemove, selectedCell) {
+    let state = false;
+    if (state1.colorSet.size !== 0 && state2.colorSet.size !== 0) {
+      let set3 = intersection(state1.colorSet, state2.colorSet);
+      if (set3.size !== 0) {
+        let inARow = [selectedCell];
+        inARow.push(...state1.inARow);
+        inARow.push(...state2.inARow);
+        if (this.isLineComplete(inARow)) {
+          ballsToRemove.push(...inARow);
+          return true;
+        }
       }
     }
-
+    if (state1.colorSet.size !== 0) {
+      let inARow = [selectedCell];
+      inARow.push(...state1.inARow);
+      if (this.isLineComplete(inARow)) {
+        ballsToRemove.push(...inARow);
+        state = true;
+      }
+    }
+    if (state2.colorSet.size !== 0) {
+      let inARow = [selectedCell];
+      inARow.push(...state2.inARow);
+      if (this.isLineComplete(inARow)) {
+        ballsToRemove.push(...inARow);
+        state = true;
+      }
+    }
+    return state;
   }
 
-  checkAll(x, y, cell) {
+  checkAll(x, y, cell, animationType = 'normal') {
     if (cell.ball !== null) {
-      this.earnedScore = 0;
       let state = false;
+      let preState = false;
       let ballsToRemove = [];
       let ball = cell.ball;
       let selected = this.field[y][x];
+      let rowsRemoved = 0;
 
       let state1 = this.check(x, y, 1, 0, ball);
-      let state4 = this.check(x, y, -1, 0, ball, state1.colorSet);
-      state1.inARow.push(selected);
-      state1.inARow.push(...state4.inARow);
-      if (this.isLineComplete(state1.inARow)) {
-        state = true;
-        ballsToRemove.push(...state1.inARow);
+      let state4 = this.check(x, y, -1, 0, ball);
+      state = this.checkForWholeLine(state1, state4, ballsToRemove, selected);
+      if (state) {
+        rowsRemoved ++;
       }
 
       let state2 = this.check(x, y, 0, 1, ball);
-      let state5 = this.check(x, y, 0, -1, ball, state2.colorSet);
-      state2.inARow.push(selected);
-      state2.inARow.push(...state5.inARow);
-      if (this.isLineComplete(state2.inARow)) {
-        state = true;
-        ballsToRemove.push(...state2.inARow);
+      let state5 = this.check(x, y, 0, -1, ball);
+      preState = this.checkForWholeLine(state2, state5, ballsToRemove, selected);
+      state |= preState;
+      if (preState) {
+        rowsRemoved ++;
       }
 
       let state3 = this.check(x, y, 1, 1, ball);
-      let state6 = this.check(x, y, -1, -1, ball, state3.colorSet);
-      state3.inARow.push(selected);
-      state3.inARow.push(...state6.inARow);
-      if (this.isLineComplete(state3.inARow)) {
-        state = true;
-        ballsToRemove.push(...state3.inARow);
+      let state6 = this.check(x, y, -1, -1, ball);
+      preState = this.checkForWholeLine(state3, state6, ballsToRemove, selected);
+      state |= preState;
+      if (preState) {
+        rowsRemoved ++;
       }
 
       let state7 = this.check(x, y, 1, -1, ball);
-      let state8 = this.check(x, y, -1, 1, ball, state7.colorSet);
-      state7.inARow.push(selected);
-      state7.inARow.push(...state8.inARow);
-      if (this.isLineComplete(state7.inARow)) {
-        state = true;
-        ballsToRemove.push(...state7.inARow);
+      let state8 = this.check(x, y, -1, 1, ball);
+      preState = this.checkForWholeLine(state7, state8, ballsToRemove, selected);
+      state |= preState;
+      if (preState) {
+        rowsRemoved ++;
       }
-
       if (state) {
-        this.removeBalls(ballsToRemove);
-        let pixel = xy2screen(x, y, this);
-        let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY, this);
-        floating.animate(this);
-        this.scoreAnimation();
+        for (let cell2remove of ballsToRemove) {
+          if (cell2remove === this.from) {
+            this.resetFrom();
+            break;
+          }
+        }
+        this.removeBalls(ballsToRemove, null, animationType);
+        this.animateScoreOnRemove(x, y, ballsToRemove.length, animationType);
+        if (rowsRemoved > 1) {
+          this.possibleBallTypes.push(x3Ball);
+        }
       }
       return state;
     }
   }
 
+  animateScoreOnRemove(x, y, ballAmount, animationType = 'normal') {
+    let pixel = xy2screen(x, y, this);
+    if (animationType === 'glow') {
+      setTimeout(() => {
+        let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY + this.hudHeight, this);
+        floating.animate(this);
+        this.HUD.scoreAnimation(ballAmount * 50);
+        this.earnedScore = 0;
+      }, 1200);
+    } else {
+      let floating = new ScoreFloat(this.earnedScore, pixel.pX, pixel.pY + this.hudHeight, this);
+      floating.animate(this);
+      this.HUD.scoreAnimation(ballAmount * 50);
+      this.earnedScore = 0;
+    }
+  }
+
   prepareNextMove(x, y, cell) {
     if (!this.checkAll(x, y, cell)) {
-      if (this.generateBalls() !== true) {
-        this.isGameOver = true;
+      if (this.generateBalls(true) !== true) {
+        this.turnOnGameOver();
+      } else {
+        this.generateBalls(false);
       }
     }
   }
 
+  showNameDialog () {
+    let dialog = document.getElementById('nameDialog');
+    dialog.className = 'dialog';
+    document.getElementById('name').value = window.localStorage.getItem('lines.savedName');
+    let save = document.getElementById('save');
+    save.onclick = () => {
+      this.saveScore();
+    };
+
+    let cancel = document.getElementById('cancel');
+    cancel.onclick = () => {
+      this.hideNameDialog();
+    }
+
+  }
+
+  saveScore () {
+    let name = document.getElementById('name').value;
+    if (name.length > 3) {
+      window.localStorage.setItem('lines.savedName', name);
+      this.endSession(name);
+      this.hideNameDialog();
+    } else {
+      alert('Your name is required (4-20 characters).')
+    }
+  }
+
+  hideNameDialog () {
+    document.getElementById('nameDialog').className = 'dialog hidden';
+    this.operateGameOver();
+  }
+
   operateGameOver() {
     if (this.isGameOver) {
+      this.resetFrom();
+      for (let row of this.field) {
+        for (let cell of row) {
+          if (cell.ball) {
+            cell.ball.removeFromScene();
+          }
+        }
+      }
       this.initGame();
-      this.generateBalls();
-      this.draw();
+      this.newGameScreen.show();
+      this.createFieldGraphics(this.graphics);
+      this.generateBalls(true);
+      this.gameOver.hide();
+      this.HUD.update();
     }
   }
 
   onClick(x, y) {
-    if (!this.blockClick) {
-      if (!this.isColorWaveModeOn) {
-        this.regularClick(x, y);
-      } else {
-        this.colorWaveClick(x, y);
+    let currentClickTime = performance.now();
+    if (currentClickTime - this.lastClickTime > 75) {
+      this.lastClickTime = currentClickTime;
+      for (let row of this.field) {
+        for (let cell of row) {
+          if (cell.ball && !cell.ball.ballCont.parent) {
+            alert(`An invisible ball is in ${cell.ball.x}, ${cell.ball.y}!!!`)
+          }
+        }
+      }
+      if (!this.blockClick) {
+        if (!this.isColorWaveModeOn) {
+          this.regularClick(x, y);
+        } else {
+          this.colorWaveClick(x, y);
+        }
       }
     }
   }
 
   colorWaveClick(x, y) {
     let cellX = Math.floor(x / this.cellWidth);
-    let cellY = Math.floor((y - this.hudHeight) / this.cellHeight);
+    let cellY = Math.floor(y / this.cellHeight);
     if (this.checkForBlockedCell(cellX, cellY)){
       return;
     }
-
     let cell = this.field[cellY][cellX];
-    if (cell.ball && cell.ball.getType() === colorWave && cell.ball.colorIdx === this.colorWaveIdx) {
-      this.removeBalls([cell]);
+    if (cell.ball && cell.ball.getType() === colorWave && cell.ball.colorIdx === this.colorWaveIdx && !cell.ball.isVanishing) {
+      this.removeBalls([cell], null);
+      this.animateScoreOnRemove(cellX, cellY, 1);
     }
   }
 
   regularClick(x, y) {
-    this.operateGameOver();
+    if (this.isGameOver) {
+      this.showNameDialog();
+    }
     let cellX = Math.floor(x / this.cellWidth);
-    let cellY = Math.floor((y - this.hudHeight) / this.cellHeight);
+    let cellY = Math.floor(y / this.cellHeight);
     if (this.checkForBlockedCell(cellX, cellY)) {
       return;
     }
@@ -314,27 +442,36 @@ export class Game {
     if (cellPressed.ball !== null) {
       if (this.from) {
         this.from.handleSelect(false);
+        this.resetAvailableCells();
       }
-      if (this.from !== cellPressed) {
+      if (this.from !== cellPressed && !cellPressed.ball.isVanishing) {
         this.from = cellPressed;
+        this.resetAvailableCells();
+        this.checkForEmptyCellsAround(cellPressed, this.availableCells);
+        this.drawAvailableCells();
         cellPressed.handleSelect(true);
       } else {
         this.from = null;
       }
     } else {
       if (this.from) {
-        this.from.handleSelect(false);
-        cellPressed.setBall(this.from.ball);
-        let from = this.from;
-        this.addBlockedCell(from);
-        this.addBlockedCell(cellPressed);
-        cellPressed.ball.hoover(this.from.x, this.from.y, () => {
-          this.removeBlockedCell(from);
-          this.removeBlockedCell(cellPressed);
-        });
-        this.from.ball = null;
-        this.from = null;
-        this.prepareNextMove(cellX, cellY, cellPressed);
+        if (!this.availableCells.has(cellPressed)) {
+            new AccessDENIED(cellX, cellY, this).appear();
+        } else {
+          this.from.handleSelect(false);
+          this.resetAvailableCells();
+          cellPressed.setBall(this.from.ball);
+          let from = this.from;
+          this.addBlockedCell(from);
+          this.addBlockedCell(cellPressed);
+          cellPressed.ball.hoover(this.from.x, this.from.y, () => {
+            this.removeBlockedCell(from);
+            this.removeBlockedCell(cellPressed);
+            this.prepareNextMove(cellX, cellY, cellPressed);
+          });
+          this.from.ball = null;
+          this.from = null;
+        }
       }
     }
   }
@@ -347,34 +484,40 @@ export class Game {
     this.blockClick = false;
   }
 
-  findEmptyCells() {
+  findEmptyCells(callback = () => {return true}) {
     let emptyCells = [];
 
     for (let row of this.field) {
       for (let cell of row) {
-        if (!cell.ball) {
+        if (!cell.ball && callback(cell)) {
           emptyCells.push(cell);
         }
       }
-    }
-
-    if (emptyCells.length === 0) {
-      this.isGameOver = true;
     }
 
     return emptyCells;
 
   }
 
-  addBallToField (selectedCell) {
-    selectedCell.ball = this.createBall(selectedCell.x, selectedCell.y);
+  turnOnGameOver() {
+    this.isGameOver = true;
+    this.score = Math.floor(this.score);
+    this.updateSession();
+    this.gameOver.show();
+  }
+
+  addBallToField (selectedCell, ball = null) {
+    if (!ball) {
+      selectedCell.setBall(this.createBall(selectedCell.x, selectedCell.y));
+    } else {
+      selectedCell.setBall(ball);
+      ball.reset();
+    }
     if (selectedCell.ball) {
       selectedCell.ball.appear(this.delay, () => {
         this.removeBlockedCell(selectedCell);
       });
       this.delay = this.delay + 100;
-    } else {
-      this.addBallToField(selectedCell);
     }
   }
 
@@ -384,13 +527,13 @@ export class Game {
       return null;
     }
     idx = Math.floor(Math.random() * emptyCells.length);
-    return emptyCells[idx];
+    return emptyCells.splice(idx, 1).pop();
   }
 
-  checkBalls(state) {
-    for (let cell of state) {
+  checkBalls(cellArray) {
+    for (let cell of cellArray) {
       if (cell !== null) {
-        this.checkAll(cell.x, cell.y, cell);
+        this.checkAll(cell.x, cell.y, cell, 'glow');
       } else {
         alert('Error!!!');
       }
@@ -404,24 +547,44 @@ export class Game {
   }
 
   expandAnimation () {
-    let scaleFactor = this.fieldWidth/(this.fieldWidth+2);
-    this.setBlock();
-    let animation = new TWEEN.Tween(this).to({scaleX:scaleFactor, scaleY:scaleFactor},1000)
-      .easing(TWEEN.Easing.Back.In).onComplete(() => {this.expandField(); this.removeBlock()}).start();
+    if (this.fieldWidth < 12) {
+      let scaleFactor = this.fieldWidth / (this.fieldWidth + 2);
+      let delta = (this.width - this.width * scaleFactor) / 2;
+      this.setBlock();
+      let animation = new TWEEN.Tween(this.cnt.field.scale)
+        .to({x: scaleFactor, y: scaleFactor}, 1000)
+        .easing(TWEEN.Easing.Back.In).onComplete(() => {
+          this.expandField();
+          this.removeBlock()
+        }).start();
+      let animation2 = new TWEEN.Tween(this.cnt.field)
+        .to({x: delta, y: delta + this.hudHeight}, 1000)
+        .easing(TWEEN.Easing.Back.In).onComplete(() => {
+          this.cnt.field.x = 0;
+          this.cnt.field.y = this.hudHeight;
+        }).start();
+    } else {
+      this.changeScore(this.multiplier, 100);
+      this.currentBonus = null;
+      this.doBonus();
+    }
   }
 
   expandField() {
+    this.resetFrom();
+    this.cnt.field.scale.set(1);
     this.scaleY = 1;
     this.scaleX = 1;
     this.oldField = this.field;
     this.fieldHeight += 2;
     this.fieldWidth += 2;
     this.field = [];
-    this.cellHeight = this.height / this.fieldHeight;
+    this.cellHeight = (this.height-this.hudHeight) / this.fieldHeight;
     this.cellWidth = this.width / this.fieldWidth;
     this.cellHeight2 = this.cellHeight / 2;
     this.cellWidth2 = this.cellWidth / 2;
     this.initField();
+    this.createFieldGraphics(this.graphics);
     for (let row of this.oldField) {
       for (let cell of row) {
         cell.x++;
@@ -432,18 +595,42 @@ export class Game {
           cell.ball.cellHeight = this.cellHeight;
           cell.ball.cellWidth = this.cellWidth;
           this.field[y][x].setBall(cell.ball);
+          cell.ball.reinit();
         }
       }
     }
+    for (let previewedBall of this.nextBalls) {
+      previewedBall.x++;
+      previewedBall.y++;
+      previewedBall.cellHeight = this.cellHeight;
+      previewedBall.cellWidth = this.cellWidth;
+      previewedBall.reinit();
+    }
+    this.currentBonus = null;
+    this.doBonus();
   }
 
   contractAnimation () {
-    let scaleFactor = this.fieldWidth/(this.fieldWidth+2);
+    let scaleFactor = this.fieldWidth / (this.fieldWidth + 2);
+    let delta = (this.width - this.width * scaleFactor) / 2;
     this.setBlock();
-    this.scaleX = scaleFactor;
-    this.scaleY = scaleFactor;
-    let animation = new TWEEN.Tween(this).to({scaleX:1, scaleY:1}, 1000).easing(TWEEN.Easing.Back.Out)
-      .onComplete(() => {this.removeBlock()}).start();
+    this.cnt.field.scale.set(scaleFactor);
+    this.cnt.field.x = delta;
+    this.cnt.field.y = delta + this.hudHeight;
+    let animation = new TWEEN.Tween(this.cnt.field.scale).to({x: 1, y: 1}, 1000)
+      .easing(TWEEN.Easing.Back.Out).start();
+    let animation2 = new TWEEN.Tween(this.cnt.field).to({x: 0, y: this.hudHeight}, 1000)
+      .easing(TWEEN.Easing.Back.Out).onComplete(() => {
+        this.finishContraction();
+      })
+      .start();
+  }
+
+  finishContraction() {
+    this.removeBlock();
+    this.findEmptyCells();
+    this.currentBonus = null;
+    this.doBonus();
   }
 
   contractOnLvlUp () {
@@ -454,26 +641,26 @@ export class Game {
 
   colorWaveMode(colorIdx) {
     if (!this.isColorWaveModeOn) {
+      this.resetFrom();
       let color = this.possibleBallColors[colorIdx];
       this.colorWaveIdx = colorIdx;
       let counter = 0;
       for (let row of this.field) {
         for (let cell of row) {
           if (cell.ball && cell.ball.colorIdx === colorIdx && !cell.ball.isVanishing) {
+            cell.ball.removeFromScene();
             cell.setBall(new ColorWave(cell.x, cell.y, this.cellWidth, this.cellHeight, colorIdx, color, this));
-            cell.ball.appear(counter*50, () => {cell.ball.dribble()});
+            cell.ball.appear(counter*50, () => {if (cell.ball) {cell.ball.dribble()}});
             counter++;
           }
         }
       }
       if (counter === 0) {
+        this.currentBonus = null;
+        this.doBonus();
         return;
       }
-      this.colorWaveTimer = new ColorWaveTimer(5000, this);
-      this.addOverallObject(this.colorWaveTimer);
-      this.colorWaveTimer.animate(() => {
-        this.turnOffColorWaveMode(colorIdx);
-      });
+      this.HUD.turnOnColorWaveTimer(colorIdx);
       this.isColorWaveModeOn = true;
     } else {
       if (!this.checkForColorWave()) {
@@ -495,7 +682,7 @@ export class Game {
   }
 
   turnOffColorWaveMode (colorIdx) {
-    this.removeOverallObject(this.colorWaveTimer);
+    this.HUD.turnOffColorWaveTimer();
     this.colorWaveTimer = null;
     this.colorWaveIdx = null;
     this.isColorWaveModeOn = false;
@@ -504,11 +691,14 @@ export class Game {
       for (let cell of row) {
         if (cell.ball && cell.ball.getType() === colorWave &&
           cell.ball.colorIdx === colorIdx && !cell.ball.isVanishing) {
+          cell.ball.removeFromScene();
           cell.setBall(new RegularBall(cell.x, cell.y, colorIdx, color, this.cellWidth, this.cellHeight, this));
           cell.ball.appear();
         }
       }
     }
+    this.currentBonus = null;
+    this.doBonus();
   }
 
   contractRemoveBalls () {
@@ -519,41 +709,74 @@ export class Game {
       let row2 = this.field[this.fieldHeight - 1];
       let cell1 = row1[xidx];
       let cell2 = row2[xidx];
-      if (cell1.ball) {
+      if (cell1.ball && !cell1.ball.isVanishing) {
+        cell1.ball.setDisabled(true);
         balls.push(cell1);
       }
-      if (cell2.ball) {
+      if (cell2.ball && !cell2.ball.isVanishing) {
+        cell2.ball.setDisabled(true);
         balls.push(cell2);
       }
     }
     for (let yidx = 1; yidx < this.fieldHeight - 1; yidx++) {
       let cell1 = this.field[yidx][0];
       let cell2 = this.field[yidx][this.fieldWidth - 1];
-      if (cell1.ball) {
+      if (cell1.ball && !cell1.ball.isVanishing) {
         cell1.ball.setDisabled(true);
         balls.push(cell1);
       }
-      if (cell2.ball) {
+      if (cell2.ball && !cell2.ball.isVanishing) {
         cell2.ball.setDisabled(true);
         balls.push(cell2);
       }
     }
-    this.removeBalls(balls, (_cell,isLast) => {if (isLast){this.contractField(); this.removeBlock()}});
+    for (let ball of this.nextBalls) {
+      if (ball.y === 0 || ball.y === this.fieldHeight - 1 || ball.x === 0 || ball.x === this.fieldWidth - 1) {
+        let newCell = this.initRandomCell(this.findEmptyCells((cell) => {
+          for (let otherBall of this.nextBalls) {
+            if (otherBall.x === cell.x && otherBall.y === cell.y) {
+              return false;
+            }
+          }
+          return cell.x !== 0 && cell.x !== this.fieldWidth - 1 && cell.y !== 0 && cell.y !== this.fieldHeight - 1;
+        }));
+        if (!newCell) {
+          for (let previewedBall of this.nextBalls) {
+            previewedBall.hidePreview();
+          }
+          this.nextBalls = [];
+          break;
+        }
+        ball.x = newCell.x;
+        ball.y = newCell.y;
+        ball.reinit();
+      }
+    }
+    if (balls.length > 0) {
+      this.removeBalls(balls, (_cell, isLast) => {
+        if (isLast) {
+          this.contractField();
+        }
+      });
+    } else {
+      this.contractField();
+    }
   }
 
   contractField () {
     if (this.fieldWidth > 6) {
-      this.scaleY = 1;
-      this.scaleX = 1;
+      this.resetFrom();
+      this.cnt.field.scale.set(1);
       this.oldField = this.field;
       this.fieldHeight -= 2;
       this.fieldWidth -= 2;
       this.field = [];
-      this.cellHeight = this.height / this.fieldHeight;
+      this.cellHeight = (this.height - this.hudHeight) / this.fieldHeight;
       this.cellWidth = this.width / this.fieldWidth;
       this.cellHeight2 = this.cellHeight / 2;
       this.cellWidth2 = this.cellWidth / 2;
       this.initField();
+      this.createFieldGraphics(this.graphics);
       for (let idx = 1; idx < this.oldField.length - 1; idx++) {
         let row = this.oldField[idx];
         for (let cellIdx = 1; cellIdx < row.length - 1; cellIdx++) {
@@ -566,24 +789,55 @@ export class Game {
             cell.ball.cellHeight = this.cellHeight;
             cell.ball.cellWidth = this.cellWidth;
             this.field[y][x].setBall(cell.ball);
+            cell.ball.reinit();
           }
         }
       }
+      for (let ball of this.nextBalls) {
+        if (ball.x === 0 || ball.x >= this.fieldWidth - 1 || ball.y === 0 || ball.y >= this.fieldHeight - 1) {
+          let newCell = this.initRandomCell(this.findEmptyCells((cell) => {
+            for (let otherBall of this.nextBalls) {
+              if (otherBall.x === cell.x && otherBall.y === cell.y) {
+                return false;
+              }
+            }
+            return cell.x !== 0 && cell.x !== this.fieldWidth - 1 && cell.y !== 0 && cell.y !== this.fieldHeight - 1;
+          }));
+          ball.x = newCell.x;
+          ball.y = newCell.y;
+        } else {
+          ball.x--;
+          ball.y--;
+        }
+        ball.cellWidth = this.cellWidth;
+        ball.cellHeight = this.cellHeight;
+        ball.reinit();
+      }
       this.contractAnimation();
+    } else {
+      this.finishContraction();
     }
   }
 
-  superBombRemoveBalls () {
+  resetFrom () {
+    if (this.from) {
+      this.from.handleSelect(false);
+      this.resetAvailableCells();
+      this.from = null;
+    }
+  }
+
+  superBombRemoveBalls (x, y) {
     this.setBlock();
+    this.resetFrom();
     this.earnedScore = -Math.floor(this.score*0.25);
-    this.scoreAnimation();
     let balls = [];
     for (let rowIdx = 0; rowIdx < this.field.length; rowIdx++) {
       let row = this.field[rowIdx];
 
       for (let cell of row) {
         cell.handleSelect(false);
-        if (cell.ball) {
+        if (cell.ball && !cell.ball.isVanishing) {
           cell.ball.setDisabled(true);
           balls.push(cell);
         }
@@ -591,31 +845,83 @@ export class Game {
     }
     this.removeBalls(balls, (cell, isLast) => {
       if (isLast) {
-        this.generateBalls();
+        this.currentBonus = null;
+        this.doBonus();
+        for (let ball of this.nextBalls) {
+          ball.hidePreview();
+        }
+        this.nextBalls = [];
+        this.generateBalls(true);
+        this.generateBalls(false);
+        this.removeBlock();
       }
-    });
+    }, 'superBomb');
+    this.animateScoreOnRemove(x, y, balls.length);
+  }
+
+  addToBonusQueue(ball) {
+    if (ball instanceof ExpansionBall) {
+      this.bonusQueue.push(ball);
+    }
+    if (ball instanceof ContractionBall) {
+      this.bonusQueue.splice(0, 0, ball);
+    }
+    if (ball instanceof SuperBomb) {
+      this.bonusQueue.push(ball);
+    }
+    if (ball instanceof ColorWave) {
+      this.bonusQueue.splice(0, 0, ball);
+    }
   }
 
   vanishCallBack(cell, isLast) {
     if (cell.ball && !cell.ball.isDisabled) {
       if (cell.ball instanceof ExpansionBall) {
-        this.expandAnimation();
+        this.addToBonusQueue(cell.ball);
       }
       if (cell.ball instanceof ContractionBall) {
-        this.contractRemoveBalls()
+        this.addToBonusQueue(cell.ball);
       }
       if (cell.ball instanceof SuperBomb) {
-        this.superBombRemoveBalls();
+        this.addToBonusQueue(cell.ball);
       }
       if (cell.ball instanceof ColorWave) {
-        this.colorWaveMode(cell.ball.colorIdx);
+        if (!this.isColorWaveModeOn) {
+          this.addToBonusQueue(cell.ball);
+        } else {
+          this.colorWaveMode(cell.ball.colorIdx);
+        }
       }
     }
     cell.ball = null;
     cell.handleSelect(false);
     if (isLast) {
+      if (this.from) {
+        this.resetAvailableCells();
+        this.checkForEmptyCellsAround(this.from, this.availableCells);
+        this.drawAvailableCells();
+      }
+      this.doBonus();
       this.levelUpIfNeeded();
-      this.removeBlock();
+    }
+  }
+
+  doBonus () {
+    if (!this.isGameOver && !this.currentBonus && this.bonusQueue.length !== 0) {
+      let bonusBall = this.bonusQueue.shift();
+      this.currentBonus = bonusBall;
+      if (bonusBall instanceof ExpansionBall) {
+        this.expandAnimation();
+      }
+      if (bonusBall instanceof ContractionBall) {
+        this.contractRemoveBalls();
+      }
+      if (bonusBall instanceof SuperBomb) {
+        this.superBombRemoveBalls(bonusBall.x, bonusBall.y);
+      }
+      if (bonusBall instanceof ColorWave) {
+        this.colorWaveMode(bonusBall.colorIdx);
+      }
     }
   }
 
@@ -623,65 +929,161 @@ export class Game {
     return array.length>=this.inARowToVanish;
   }
 
-  removeBalls (cellArray, onComplete) {
-    let delay = 0;
+  removeBalls (cellArray, onComplete, animationType = 'normal') {
     let score = 0;
     let secondMultiplier = 1;
-    if (cellArray.length >= this.inARowToVanish+1) {
+    if (cellArray.length >= this.inARowToVanish + 1) {
       this.possibleBallTypes.push(rainbow);
     }
     for (let index in cellArray) {
       let cell = cellArray[index];
+      if (cell.ball.isVanishing) {
+        continue;
+      }
+      cell.ball.isVanishing = true;
       score += cell.ball.getScore();
       this.addBlockedCell(cell);
       if (cell.ball.getType() === x3Ball) {
         secondMultiplier *= 3;
       }
+      let isLast = parseInt(index) === cellArray.length - 1;
       this.incrementRemovedBalls();
-      cell.ball.vanish(() => {
-        let isLast = parseInt(index) === cellArray.length-1;
-        this.removeBlockedCell(cell);
-        if (onComplete) {
-          cell.ball = null;
-          cell.handleSelect(false);
-          onComplete(cell, isLast)
-        } else {
-          this.vanishCallBack(cell, isLast);
-        }
-      }, delay);
-      delay += 100;
+      switch (animationType) {
+        case "glow":
+          cell.ball.glow(() => {
+            cell.ball.vanish(() => {
+              this.removeBlockedCell(cell);
+              if (onComplete) {
+                cell.ball = null;
+                cell.handleSelect(false);
+                onComplete(cell, isLast)
+              } else {
+                this.vanishCallBack(cell, isLast);
+              }
+            }, index * 100);
+          });
+          break;
+
+        case "superBomb":
+          cell.ball.superBombVanish(() => {
+            this.removeBlockedCell(cell);
+            if (onComplete) {
+              cell.ball = null;
+              cell.handleSelect(false);
+              onComplete(cell, isLast)
+            } else {
+              this.vanishCallBack(cell, isLast);
+            }
+          }, index * 15);
+          break;
+
+        default:
+          cell.ball.vanish(() => {
+            this.removeBlockedCell(cell);
+            if (onComplete) {
+              cell.ball = null;
+              cell.handleSelect(false);
+              onComplete(cell, isLast)
+            } else {
+              this.vanishCallBack(cell, isLast);
+            }
+          }, index * 100);
+          break;
+      }
     }
     this.changeScore(this.multiplier, score, secondMultiplier);
   }
 
+  getTween () {
+    return TWEEN;
+  }
+
   incrementRemovedBalls() {
     this.ballsRemoved ++;
+    if (this.ballsRemoved%10 === 0) {
+      setTimeout(() => {this.updateSession();}, 1000);
+    }
     if (this.ballsRemoved%29 === 0) {
       this.forcedBallTypes.push(colorWave);
     }
   }
 
-  generateBalls () {
-    let state = [];
+  createNewBallsArray (empty) {
+    let newBallsArray = [];
     for (let idx = 0; idx < this.ballsPerTime; idx++) {
-      let element = this.initRandomCell(this.findEmptyCells());
+      let element = this.initRandomCell(empty);
       if (element !== null) {
-        this.addBallToField(element);
-        state.push(element);
-        this.addBlockedCell(element);
+        let ball = this.createBall(element.x, element.y);
+        newBallsArray.push(ball);
       }
     }
-    let empty = this.findEmptyCells();
-    if (empty.length === 0) {
-      this.delay = 0;
-      return false;
-    }
-    else {
-      if (empty.length <= 0.33*this.fieldHeight*this.fieldWidth && !this.checkForSuperBombs()) {
+    return newBallsArray;
+  }
+
+  generateBalls (areBallsReal = true) {
+    let empty = this.findEmptyCells((cell) => {
+      for (let ball of this.nextBalls) {
+        if (cell.x === ball.x && cell.y === ball.y) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    let newBalls = [];
+
+    if (areBallsReal) {
+      if (this.nextBalls.length === 0) {
+        newBalls = this.createNewBallsArray(empty);
+        for (let ball of newBalls) {
+          let element = this.field[ball.y][ball.x];
+          this.addBallToField(element, ball);
+          this.addBlockedCell(element);
+        }
+        //adding balls to field.
+
+      } else {
+        newBalls = this.nextBalls;
+        for (let ball of this.nextBalls) {
+          ball.hidePreview();
+          let cell = this.field[ball.y][ball.x];
+          if (cell.ball) {
+            cell = this.initRandomCell(empty);
+            if (cell === null) {
+              this.delay = 0;
+              return false;
+            }
+          }
+          this.addBallToField(cell, ball);
+          this.addBlockedCell(cell);
+        }
+      }
+
+      if (empty.length <= 0.33 * this.fieldHeight * this.fieldWidth && !this.checkForSuperBombs()) {
         this.forcedBallTypes.push(superBomb);
       }
-      this.checkBalls(state);
+      let cells = [];
+      for (let ball of newBalls) {
+        let cell = this.field[ball.y][ball.x];
+        cells.push(cell);
+      }
+      this.checkBalls(cells);
       this.delay = 0;
+      for (let row of this.field) {
+        for (let cell of row) {
+          if (!cell.ball || cell.ball.isVanishing) {
+            return true;
+          }
+        }
+      }
+      return false;
+    } else {
+
+      newBalls = this.createNewBallsArray(empty);
+      this.nextBalls = newBalls;
+      for (let ball of newBalls) {
+        ball.showPreview();
+      }
       return true;
     }
   }
@@ -721,7 +1123,7 @@ export class Game {
       }
       case rainbow: {
         this.removeBallType(rainbow);
-        return new RainbowBall(x, y, this.cellHeight, this.cellWidth, this.possibleBallColors,this);
+        return new RainbowBall(x, y, this.cellHeight, this.cellWidth, this);
       }
       case doubleBall: {
         let colorIdx1 = this.getRandomColorIdx();
@@ -745,7 +1147,7 @@ export class Game {
       }
       case superBomb: {
         this.removeBallType(superBomb);
-        return new SuperBomb(x, y, this.cellWidth, this.cellHeight, this.possibleBallColors, this);
+        return new SuperBomb(x, y, this.cellWidth, this.cellHeight, this);
       }
       case colorWave: {
         this.removeBallType(colorWave);
@@ -754,9 +1156,15 @@ export class Game {
         return new ColorWave(x, y, this.cellWidth, this.cellHeight, colorIdx, color, this);
       }
       case x3Ball: {
+        this.removeBallType(x3Ball);
         let colorIdx = this.getRandomColorIdx();
         let color = this.possibleBallColors[colorIdx];
         return new X3Ball(x, y, colorIdx, color, this.cellWidth, this.cellHeight, this);
+      }
+      default: {
+        let colorIdx = this.getRandomColorIdx();
+        let color = this.possibleBallColors[colorIdx];
+        return new RegularBall(x, y, colorIdx, color, this.cellWidth, this.cellHeight, this);
       }
     }
   }
@@ -779,6 +1187,9 @@ export class Game {
       let element = this.field[y + deltaY][x + deltaX];
       if (element.ball !== null) {
         prevColorSet = colorSet;
+        if (element.ball.isVanishing) {
+          return {inARow: inARow, colorSet: colorSet};
+        }
         colorSet = intersection(colorSet, element.ball.colors);
         if (colorSet.size !== 0) {
           inARow.push(element);
@@ -794,77 +1205,36 @@ export class Game {
     return {inARow:inARow, colorSet:colorSet};
   }
 
-
-
-  scoreAnimation() {
-    let animation = new TWEEN.Tween(this).to({score:this.score+this.earnedScore}, 1000).easing(TWEEN.Easing.Quadratic.Out).start();
-  }
-
-  drawHUD () {
-    let offsetY = this.hudHeight*0.36;
-    let offsetX = this.hudHeight*0.2;
-    let textHeight = this.hudHeight*0.44;
-    this.ctx.font = `bold ${textHeight}px MainFont`;
-    this.ctx.textBaseline = 'top';
-    this.ctx.textAlign = 'start';
-    this.ctx.fillStyle = 'rgb(98,98,98)';
-    this.ctx.fillText(`Score: ${Math.floor(this.score)}`, offsetX, offsetY);
-    this.ctx.textAlign = 'end';
-    this.ctx.fillText(`Lvl Up: ${Math.floor(this.scoreToLevelUp-this.score)}`, this.width - offsetX, offsetY);
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText(`Lvl: ${this.level}`, this.width/2, offsetY);
-  }
-
-
-  drawFieldContent () {
-    this.ctx.save();
-    this.ctx.translate(0, this.hudHeight);
-    if (this.scaleX<1) {
-      this.ctx.translate(this.width/2, this.gameHeight/2);
-      this.ctx.scale(this.scaleX, this.scaleY);
-      this.ctx.translate(-this.width/2, -this.gameHeight/2);
-    }
-    for (let y of this.field) {
-      for (let cell of y) {
-        cell.drawCell(this);
+  checkForEmptyCellsAround (cell, alreadyCheckedCellsSet) {
+    if (cell.ball && cell.ball.getType() === superBomb || this.mode === 'easy') {
+      for (let emptyCell of this.findEmptyCells()) {
+        alreadyCheckedCellsSet.add(emptyCell);
       }
+    } else {
+      this.trackEmptyCell(cell.x + 1, cell.y, alreadyCheckedCellsSet);
+      this.trackEmptyCell(cell.x - 1, cell.y, alreadyCheckedCellsSet);
+      this.trackEmptyCell(cell.x, cell.y + 1, alreadyCheckedCellsSet);
+      this.trackEmptyCell(cell.x, cell.y - 1, alreadyCheckedCellsSet);
     }
-    for (let y of this.field) {
-      for (let cell of y) {
-        cell.drawBall(this);
+  }
+
+  trackEmptyCell (nx, ny, alreadyCheckedCellsSet) {
+    if (!(nx < 0) && !(nx > this.fieldWidth - 1)
+      && !(ny < 0) && !(ny > this.fieldHeight - 1)) {
+
+      let lookingAtCell = this.field[ny][nx];
+      if (!lookingAtCell.ball
+        && !alreadyCheckedCellsSet.has(lookingAtCell)) {
+
+        alreadyCheckedCellsSet.add(lookingAtCell);
+        this.checkForEmptyCellsAround(lookingAtCell, alreadyCheckedCellsSet);
+
       }
-    }
-    this.ctx.restore();
-  }
 
-  draw () {
-    this.ctx.clearRect(0, 0, this.width, this.gameHeight);
-    this.drawHUD();
-    this.drawFieldContent();
-    this.drawLast();
-    if (this.isGameOver) {
-      this.drawGameOver();
     }
   }
 
-  drawLast () {
-    for (let index in this.drawOverAll) {
-      let object = this.drawOverAll[index];
-      object.draw();
-    }
+  createHUD () {
+    this.HUD = new HUD(this);
   }
-
-  drawGameOver () {
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-    let fontHeight = this.gameHeight*0.098;
-    this.ctx.fillRect(0, 0, this.width, this.gameHeight);
-    this.ctx.font = `bold ${fontHeight}px MainFont`;
-    this.ctx.fillStyle = 'rgb(180,0,46)';
-    this.ctx.strokeStyle = 'rgb(255, 255, 255)';
-    this.ctx.strokeWidth = 3;
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('GAME OVER', this.width/2, this.height/2);
-    this.ctx.strokeText('GAME OVER', this.width/2, this.height/2);
-  }
-
 }

@@ -1,5 +1,7 @@
 import {RegularBall} from "./regularBall";
+import {Ball} from "./ball";
 import TWEEN from "@tweenjs/tween.js";
+import * as PIXI from 'pixi.js';
 
 export const x3Ball = 'x3';
 
@@ -7,20 +9,19 @@ export class X3Ball extends RegularBall {
   constructor(x, y, colorIdx, color, cellWidth, cellHeight, game) {
     super(x, y, colorIdx, color, cellWidth, cellHeight, game);
     this.opacity = 1;
+    this.overlaySprite = new PIXI.Sprite(this.game.tex.ballOverlay.x3);
+    this.overlaySprite.anchor.set(0.5);
+    this.overlaySprite.scale.set(this.cellWidth / this.overlaySprite.width * Ball.defaultScaleMultiplier);
+    this.ballCont.addChild(this.overlaySprite);
+  }
+
+  reinit() {
+    super.reinit();
+    this.overlaySprite.scale.set(this.cellWidth / (this.overlaySprite.width / this.overlaySprite.scale.x) * Ball.defaultScaleMultiplier);
   }
 
   getType() {
     return x3Ball;
-  }
-
-  drawBall() {
-    super.drawBall();
-    let radius = Math.floor(this.cellHeight * 0.3125);
-    this.game.ctx.font = `bold ${radius * 0.55}px SmallPixel`;
-    this.game.ctx.textAlign = 'center';
-    this.game.ctx.textBaseline = 'middle';
-    this.game.ctx.fillStyle = `rgba(0,0,0,${this.opacity})`;
-    this.game.ctx.fillText('x3', 0, 0);
   }
 
   vanish(onComplete, delay = 0) {

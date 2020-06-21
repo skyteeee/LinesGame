@@ -1,4 +1,7 @@
 import {Game} from "./game";
+import TWEEN from "@tweenjs/tween.js";
+import css from '../css/lines.css'
+
 
 function init () {
   game.init();
@@ -10,6 +13,7 @@ function onResize() {
 }
 
 window.onload = init;
-window.onresize = onResize;
 
 let game = new Game();
+window.game = game;
+window.TWEEN = TWEEN;

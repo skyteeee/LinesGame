@@ -1,0 +1,50 @@
+<!doctype html>
+<html class="no-js" lang="">
+
+<head>
+  <meta charset="utf-8">
+  <title>Lines <%= version %></title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="apple-touch-icon" href="icon.png">
+  <!-- link rel="stylesheet" href="css/lines.css" -->
+  <!-- Place favicon.ico in the root directory -->
+
+  <!--link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/main.css"-->
+
+  <meta name="theme-color" content="#eaeae4">
+</head>
+
+<body >
+
+  <h1 class="title">Lines Game!</h1>
+  <div class="forGame">
+    <div class="center">
+    <div class="canvasHolder" id="fieldHolder">
+      <div class="loading">
+        <h1 class="loading">LOADING...</h1>
+      </div>
+      <div id="nameDialog" class="dialog hidden">
+        <div class="inputArea">
+          <label for="name">Name:</label>
+
+          <input type="text" id="name" name="name" required
+                 minlength="3" maxlength="20" size="20">
+        </div>
+
+        <div class="buttonsArea">
+          <div id="cancel" class="button">Cancel</div>
+          <div id="save" class="button">Save</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+<span id="version"><%= version %> by Skyteeee. 2020</span>
+
+</body>
+
+</html>

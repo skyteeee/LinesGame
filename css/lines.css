@@ -1,10 +1,22 @@
-#field {
+.canvasHolder canvas {
   width: 100%;
   height: 100%;
-  background-color: #dddddd;
+  background-color: #eaeae4;
   position: absolute;
   top: 0;
   left: 0;
+}
+
+.loading {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
 }
 
 @font-face {
@@ -29,15 +41,103 @@
   justify-content: center;
 }
 
+.title {
+  width: 100%;
+  text-align: center;
+}
+
 .canvasHolder {
   width: 100%;
   padding-bottom: 106%;
   position: relative;
 }
 
+.dialog.hidden {
+  display: none;
+}
+
+.dialog {
+  width: 90%;
+  height: 30%;
+  margin: auto;
+  top: 35%;
+  left: 5%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #f2f2f2;
+  border: 1px solid #4b4b4b;
+  z-index: 100;
+  position: absolute;
+}
+
+.inputArea {
+  width: 100%;
+  height: 50px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 5%;
+}
+
+.inputArea label {
+  padding-right: 5px;
+}
+
+.inputArea input {
+  height: 34px;
+  width: 65%;
+  font-family: 'MainFont', Fallback, sans-serif;
+}
+
+.buttonsArea {
+  height: 50px;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  padding-right: 20px;
+}
+
+#cancel {
+  background-color: #ff918b;
+}
+
+#cancel:hover {
+  background-color: #d25858;
+}
+
+#save {
+  background-color: #baff9e;
+}
+
+#save:hover {
+  background-color: #99d485;
+}
+
+.button {
+  border: 1px solid black;
+  width: 125px;
+  height: 100%;
+  text-align: center;
+  line-height: 50px;
+  margin-left: 5px;
+  margin-right: 5px;
+  cursor: pointer;
+}
+
+span {
+  font-size: 12px;
+  position: absolute;
+  bottom: 5px;
+  right: 10px;
+  color: #555555;
+}
+
 body {
   font-family: 'MainFont', Fallback, sans-serif;
   margin: 0;
+  background-color: #eaeae4;
   height: 100%;
   width: 100%;
 }

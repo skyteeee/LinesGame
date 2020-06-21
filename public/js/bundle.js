@@ -1,0 +1,1 @@
+console.error("\nC:\\Users\\Andrew\\WebstormProjects\\LinesGame\\css\\lines.css:1\n.canvasHolder canvas {\r\n^\nParseError: Unexpected token");
