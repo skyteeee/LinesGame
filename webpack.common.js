@@ -53,12 +53,12 @@ module.exports = {
     new MiniCssExtractPlugin({
       filename: '[name]-[contenthash].css',
       chunkFilename: '[id]-[contenthash].css',}),
-    new CleanWebpackPlugin({cleanOnceBeforeBuildPatterns: ['**/*', '!img*', '!img/*', '!fonts*', '!fonts/*']}),
+    new CleanWebpackPlugin({cleanOnceBeforeBuildPatterns: ['**/*', '!img*', '!img/*', '!fonts*', '!fonts/*', '!*.ttf']}),
     new HtmlWebpackPlugin({
       // If you pass a plain object, it will be merged with the default values
       // (New in version 4)
       templateParameters: {
-        'version': 'v0.7.2'
+        'version': 'v0.8.0'
       },
       template: 'index.ejs'
     })

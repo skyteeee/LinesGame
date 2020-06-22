@@ -228,6 +228,21 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
+            <key type="filename">lines/leaderboard_crown.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0.5,0.5</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>28,25,55,50</rect>
+                <key>scale9Paddings</key>
+                <rect>28,25,55,50</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
             <key type="filename">lines/particle_ball.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
@@ -280,6 +295,7 @@
             <filename>lines/diamond_red.png</filename>
             <filename>lines/diamond_violet.png</filename>
             <filename>lines/diamond_yellow.png</filename>
+            <filename>lines/leaderboard_crown.png</filename>
         </array>
         <key>ignoreFileList</key>
         <array/>

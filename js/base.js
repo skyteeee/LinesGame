@@ -114,6 +114,7 @@ export class Base {
     this.tex.ballOverlay = {
       particleBall: this.tex.allImg['particle_ball.png'],
       x3: this.tex.allImg['overlay_x3.png'],
+      leaderCrown: this.tex.allImg['leaderboard_crown.png'],
       denied: this.tex.allImg['close.png'],
       contract: this.tex.allImg['overlay_contract.png'],
       expand: this.tex.allImg['overlay_expand.png'],
@@ -198,8 +199,32 @@ export class Base {
       app: 'lines'
     }, data => {
       this.leaderboard = data.data;
-      console.log('Received top scores ', data.data);
+      this.showLeaderBoard();
     })
+  }
+
+  showLeaderBoard () {
+    let body = document.getElementById('topBody');
+    body.innerHTML = '';
+    for (let leaderboardItem of this.leaderboard) {
+      let row = document.createElement('div');
+      row.className = 'row';
+      let name = document.createElement('div');
+      name.innerText = `${leaderboardItem.num}. ${leaderboardItem.user_name}`;
+      row.appendChild(name);
+      let score = document.createElement('div');
+      score.innerText = `$${leaderboardItem.score}`;
+      row.appendChild(score);
+      body.appendChild(row);
+    }
+    document.getElementById('closeLeaders').onclick = () => {this.hideLeaderBoard()};
+
+
+    document.getElementById('topScoresArea').className = 'topScores'
+  }
+
+  hideLeaderBoard () {
+    document.getElementById('topScoresArea').className = 'topScores hidden'
   }
 
   updateSession() {
